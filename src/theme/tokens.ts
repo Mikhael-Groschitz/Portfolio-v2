@@ -47,7 +47,15 @@ export const TOKEN_GROUPS = {
     "status-separator",
     "icon-execute",
   ],
-  easterEggs: ["status-time-travel", "text-on-time-travel", "regeneration"],
+  easterEggs: [
+    "status-time-travel",
+    "text-on-time-travel",
+    "regeneration",
+    "tardis-body",
+    "tardis-shade",
+    "tardis-window",
+    "tardis-lamp",
+  ],
 } as const;
 
 export type TokenGroup = keyof typeof TOKEN_GROUPS;
@@ -56,10 +64,10 @@ export type TokenName = (typeof TOKEN_GROUPS)[TokenGroup][number];
 export const TOKEN_NAMES: readonly TokenName[] =
   Object.values(TOKEN_GROUPS).flat();
 
-export const AA_TEXT = 4.5;
-export const AA_NON_TEXT = 3;
+const AA_TEXT = 4.5;
+const AA_NON_TEXT = 3;
 
-export interface ContrastPair {
+interface ContrastPair {
   fg: TokenName;
   bg: TokenName;
   min: number;
@@ -122,6 +130,8 @@ export const CONTRAST_PAIRS: readonly ContrastPair[] = [
   ...uiOn("icon-folder", "bg-panel"),
   ...uiOn("icon-execute", "bg-window", "bg-tab-active"),
   ...uiOn("status-time-travel", "status-connected"),
+  ...uiOn("tardis-body", "bg-window", "bg-panel"),
+  ...uiOn("tardis-window", "tardis-body", "tardis-shade"),
   ...uiOn("regeneration", "bg-window", "bg-panel", "bg-editor"),
   ...uiOn("tree-expander-border", "bg-panel"),
   ...uiOn("tree-expander-glyph", "text"),

@@ -64,6 +64,10 @@
   --status-time-travel: #003b6f;
   --text-on-time-travel: #ffffff;
   --regeneration: #f5c04a;
+  --tardis-body: #3f72c0;
+  --tardis-shade: #22477e;
+  --tardis-window: #dbe9ff;
+  --tardis-lamp: #fff4cc;
 
   /* Fonts: system stacks only, nothing embedded */
   --font-code: Consolas, "Cascadia Mono", ui-monospace, monospace;
