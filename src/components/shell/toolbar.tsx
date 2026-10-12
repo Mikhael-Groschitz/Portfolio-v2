@@ -1,14 +1,16 @@
-import { localize } from "@/content";
+import { pageTexts } from "@/components/locale/page-locale";
 import { CornerActions } from "./corner-actions";
 import { EditorToolbar } from "./editor-toolbar";
 import { StandardToolbar } from "./standard-toolbar";
 import styles from "./toolbar.module.css";
 
-export function Toolbar() {
+export async function Toolbar() {
+  const { shell } = await pageTexts();
+
   return (
     <div className={styles.toolbars}>
       <StandardToolbar />
-      <CornerActions text={localize((texts) => texts.shell.corner)} />
+      <CornerActions text={shell.corner} />
       <EditorToolbar />
     </div>
   );

@@ -8,10 +8,7 @@ import {
   useRef,
 } from "react";
 import { CaretDownIcon, CloseIcon, PinIcon } from "@/components/icons";
-import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { MenuButton, type PopupMenuItem } from "@/components/menu/menu-button";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { WindowText } from "@/content/types";
 import {
   type Box,
@@ -56,7 +53,7 @@ const PLACEMENT_LABELS: readonly [
 interface WindowProps {
   windowId: ToolWindowId;
   panelId: string;
-  text: Localized<ToolWindowText>;
+  text: ToolWindowText;
   onChoice?: () => void;
 }
 
@@ -172,10 +169,10 @@ function MoveHandle({ windowId, panelId, text, onChoice }: WindowProps) {
   return (
     <>
       <span id={labelId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (entry) => entry.move)} />
+        {text.move}
       </span>
       <span id={hintId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (entry) => entry.moveHint)} />
+        {text.moveHint}
       </span>
       <button
         type="button"
@@ -204,8 +201,6 @@ function WindowMenu({
   onClose,
 }: WindowProps & { onClose: () => void }) {
   const placement = useLayout()[windowId].placement;
-  const { locale } = useLanguage();
-  const labels = text[locale];
 
   function choose(next: Placement) {
     onChoice?.();
@@ -214,20 +209,20 @@ function WindowMenu({
 
   return (
     <MenuButton
-      label={<LocaleText text={mapLocalized(text, (entry) => entry.menu)} />}
+      label={text.menu}
       className={styles.button}
       triggerData={{ "data-window-menu": "" }}
       items={() => [
         ...PLACEMENT_LABELS.map(([option, key]): PopupMenuItem => ({
           key: option,
-          label: labels[key],
+          label: text[key],
           role: "menuitemradio",
           checked: placement === option,
           onSelect: () => choose(option),
         })),
         {
           key: "hide",
-          label: labels.hide,
+          label: text.hide,
           separatorBefore: true,
           onSelect: onClose,
         },
@@ -269,9 +264,7 @@ export function ToolWindowControls({
         {placement !== "floating" && (
           <>
             <span id={pinLabelId} className="visually-hidden">
-              <LocaleText
-                text={mapLocalized(text, (entry) => entry.autoHide)}
-              />
+              {text.autoHide}
             </span>
             <button
               type="button"
@@ -291,7 +284,7 @@ export function ToolWindowControls({
         )}
       </span>
       <span id={closeLabelId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (entry) => entry.close)} />
+        {text.close}
       </span>
       <button
         type="button"

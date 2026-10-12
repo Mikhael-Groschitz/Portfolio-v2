@@ -1,21 +1,24 @@
 import { describe, expect, it } from "vitest";
 import { getTexts } from "@/content";
 import { LOCALES } from "@/content/locales";
+import { SECTION_IDS } from "@/content/types";
 import robots from "./robots";
 import {
   HOME_PAGE,
   INDEXED_PAGES,
-  SITE_PAGES,
   SITE_URL,
-  canonicalPath,
+  type SitePage,
   imageAlt,
+  openGraphLocales,
   pageDescription,
   pageMetadata,
+  pagePath,
   pageTitle,
-  pageTitlesByPath,
-  siteMetadata,
+  titleTemplate,
 } from "./site-metadata";
 import sitemap from "./sitemap";
+
+const SITE_PAGES: readonly SitePage[] = [HOME_PAGE, ...SECTION_IDS, "query"];
 
 describe("page titles", () => {
   it("names the home page after the person and the headline", () => {
@@ -42,6 +45,21 @@ describe("page titles", () => {
     );
   });
 
+  it("builds each title from the page name and the layout template", () => {
+    for (const locale of LOCALES) {
+      const texts = getTexts(locale);
+      for (const page of SITE_PAGES.filter((item) => item !== HOME_PAGE)) {
+        const { title } = pageMetadata(page, locale);
+        expect(titleTemplate(texts).replace("%s", String(title))).toBe(
+          pageTitle(page, texts),
+        );
+      }
+      expect(pageMetadata(HOME_PAGE, locale).title).toEqual({
+        absolute: pageTitle(HOME_PAGE, texts),
+      });
+    }
+  });
+
   it("gives every page its own title in every language", () => {
     for (const locale of LOCALES) {
       const titles = SITE_PAGES.map((page) =>
@@ -49,21 +67,6 @@ describe("page titles", () => {
       );
       expect(new Set(titles).size).toBe(titles.length);
     }
-  });
-
-  it("knows the title of every address in both languages", () => {
-    const titles = pageTitlesByPath();
-    expect(Object.keys(titles).sort()).toEqual(
-      SITE_PAGES.map(canonicalPath).sort(),
-    );
-    expect(titles["/"]).toEqual({
-      "pt-BR": "Mikhael Groschitz Costa | Engenheiro de dados",
-      en: "Mikhael Groschitz Costa | Data Engineer",
-    });
-    expect(titles["/career"]).toEqual({
-      "pt-BR": "Carreira | Mikhael Groschitz Costa",
-      en: "Career | Mikhael Groschitz Costa",
-    });
   });
 });
 
@@ -91,51 +94,74 @@ describe("page descriptions", () => {
   });
 });
 
-describe("canonical addresses", () => {
-  it("gives the empty start page the root address", () => {
-    expect(canonicalPath(HOME_PAGE)).toBe("/");
-    expect(pageMetadata(HOME_PAGE).alternates?.canonical).toBe("/");
+describe("addresses", () => {
+  it("keeps Portuguese at the root and English under /en", () => {
+    expect(pagePath(HOME_PAGE, "pt-BR")).toBe("/");
+    expect(pagePath(HOME_PAGE, "en")).toBe("/en");
+    expect(pagePath("career", "pt-BR")).toBe("/career");
+    expect(pagePath("career", "en")).toBe("/en/career");
+    expect(pagePath("query", "en")).toBe("/en/query");
   });
 
-  it("keeps every other page on its own address", () => {
-    expect(canonicalPath("about")).toBe("/about");
-    expect(pageMetadata("about").alternates?.canonical).toBe("/about");
-    expect(canonicalPath("career")).toBe("/career");
-    expect(canonicalPath("query")).toBe("/query");
-    expect(pageMetadata("projects")).toMatchObject({
-      title: "Projetos | Mikhael Groschitz Costa",
-      alternates: { canonical: "/projects" },
+  it("describes each page in its own language and links the twin", () => {
+    expect(pageMetadata("projects", "en")).toMatchObject({
+      title: "Projects",
+      alternates: {
+        canonical: "/en/projects",
+        languages: {
+          "pt-BR": "/projects",
+          en: "/en/projects",
+          "x-default": "/projects",
+        },
+      },
+    });
+    expect(pageMetadata(HOME_PAGE, "pt-BR")).toMatchObject({
+      title: { absolute: "Mikhael Groschitz Costa | Engenheiro de dados" },
+      alternates: { canonical: "/" },
     });
   });
 });
 
 describe("site metadata", () => {
-  it("resolves addresses against the site domain", () => {
-    expect(String(siteMetadata().metadataBase)).toBe(`${SITE_URL}/`);
-  });
-
-  it("shares pages in Portuguese, with English as the alternate", () => {
-    expect(siteMetadata().openGraph).toMatchObject({
-      type: "website",
+  it("shares each page in its language, with the other as the alternate", () => {
+    expect(openGraphLocales("pt-BR")).toEqual({
       locale: "pt_BR",
       alternateLocale: ["en_US"],
     });
-    expect(siteMetadata().twitter).toEqual({ card: "summary_large_image" });
+    expect(openGraphLocales("en")).toEqual({
+      locale: "en_US",
+      alternateLocale: ["pt_BR"],
+    });
+  });
+
+  it("lists keywords in every language, each one once", () => {
+    for (const locale of LOCALES) {
+      const { keywords } = getTexts(locale).seo;
+      expect(keywords.length).toBeGreaterThan(0);
+      expect(new Set(keywords).size).toBe(keywords.length);
+    }
   });
 });
 
 describe("sitemap and robots", () => {
-  it("lists the start page and every section, without /query", () => {
-    expect(sitemap().map((entry) => entry.url)).toEqual([
-      `${SITE_URL}/`,
-      `${SITE_URL}/about`,
-      `${SITE_URL}/tech-stack`,
-      `${SITE_URL}/career`,
-      `${SITE_URL}/projects`,
-      `${SITE_URL}/beyond-the-terminal`,
-      `${SITE_URL}/contact`,
-      `${SITE_URL}/resume`,
-    ]);
+  it("lists the start page and every section in both languages, without /query", () => {
+    expect(sitemap().map((entry) => entry.url)).toEqual(
+      INDEXED_PAGES.flatMap((page) => [
+        `${SITE_URL}${page === HOME_PAGE ? "/" : `/${page}`}`,
+        `${SITE_URL}/en${page === HOME_PAGE ? "" : `/${page}`}`,
+      ]),
+    );
+  });
+
+  it("tells search engines which page is the twin in the other language", () => {
+    const career = sitemap().find(
+      (entry) => entry.url === `${SITE_URL}/en/career`,
+    );
+    expect(career?.alternates?.languages).toEqual({
+      "pt-BR": `${SITE_URL}/career`,
+      en: `${SITE_URL}/en/career`,
+      "x-default": `${SITE_URL}/career`,
+    });
   });
 
   it("lets every crawler in and points to the sitemap", () => {

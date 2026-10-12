@@ -57,6 +57,15 @@ export const DATE_IN_THE_FUTURE: FixedError = {
   },
 };
 
+export const ANOTHER_CASTLE: ErrorEntry = {
+  franchise: "mario",
+  code: 404,
+  text: {
+    "pt-BR": "Obrigado, Mario! Mas a sua tabela está em outro castelo!",
+    en: "Thank you, Mario! But your table is in another castle!",
+  },
+};
+
 export const ERROR_POOL: readonly ErrorEntry[] = [
   {
     franchise: "doctor-who",
@@ -98,14 +107,7 @@ export const ERROR_POOL: readonly ErrorEntry[] = [
       en: "Reverse the polarity of the neutron flow and try again.",
     },
   },
-  {
-    franchise: "mario",
-    code: 404,
-    text: {
-      "pt-BR": "Obrigado, Mario! Mas a sua tabela está em outro castelo!",
-      en: "Thank you, Mario! But your table is in another castle!",
-    },
-  },
+  ANOTHER_CASTLE,
   {
     franchise: "mario",
     code: 1985,

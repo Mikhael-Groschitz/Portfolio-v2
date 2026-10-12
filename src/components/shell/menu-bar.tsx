@@ -24,15 +24,12 @@ import {
   shortcutText,
 } from "@/components/commands/command-model";
 import { MenuIcon } from "@/components/icons";
-import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import {
   MenuItem,
   MenuSeparator,
   menuItemsIn,
 } from "@/components/menu/menu-item";
 import { commandItemRole } from "@/components/toolbar/command-menu-item";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { CommandId, MenuText } from "@/content/types";
 import {
   MENU_TRIGGERS,
@@ -46,7 +43,7 @@ import styles from "./menu-bar.module.css";
 type ItemFocus = "first" | "last";
 
 interface MenuBarProps {
-  text: Localized<MenuText>;
+  text: MenuText;
 }
 
 const VISIBILITY_CLASS: Record<MenuTrigger["visibility"], string> = {
@@ -61,7 +58,6 @@ function focusItem(container: HTMLElement | null, itemFocus: ItemFocus) {
 }
 
 export function MenuBar({ text }: Readonly<MenuBarProps>) {
-  const { locale } = useLanguage();
   const commands = useCommands();
   const baseId = useId();
   const [openId, setOpenId] = useState<MenuTriggerId | null>(null);
@@ -259,11 +255,11 @@ export function MenuBar({ text }: Readonly<MenuBarProps>) {
               <div
                 key={menu.id}
                 role="group"
-                aria-label={text[locale].menus[menu.id]}
+                aria-label={text.menus[menu.id]}
                 className={styles.group}
               >
                 <div aria-hidden="true" className={styles.groupLabel}>
-                  {text[locale].menus[menu.id]}
+                  {text.menus[menu.id]}
                 </div>
                 {renderEntries(menu.entries, trigger)}
               </div>
@@ -277,13 +273,11 @@ export function MenuBar({ text }: Readonly<MenuBarProps>) {
       return (
         <>
           <MenuIcon />
-          <span className="visually-hidden">
-            <LocaleText text={mapLocalized(text, (entry) => entry.more)} />
-          </span>
+          <span className="visually-hidden">{text.more}</span>
         </>
       );
     }
-    return <LocaleText text={mapLocalized(text, (entry) => entry.menus[id])} />;
+    return text.menus[id];
   }
 
   const menuBarLabelId = `${baseId}-label`;
@@ -291,7 +285,7 @@ export function MenuBar({ text }: Readonly<MenuBarProps>) {
   return (
     <>
       <span id={menuBarLabelId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (entry) => entry.label)} />
+        {text.label}
       </span>
       <div
         ref={rootRef}

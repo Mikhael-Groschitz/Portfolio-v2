@@ -1,36 +1,33 @@
-import { LocaleText } from "@/components/locale/locale-text";
+import { pageLocale } from "@/components/locale/page-locale";
 import { EXPLORER_TITLE_ID } from "@/components/shell/element-ids";
-import { localize } from "@/content";
-import { mapLocalized } from "@/content/locales";
+import { getTexts } from "@/content";
 import { ExplorerControls } from "./explorer-controls";
 import { explorerNodes } from "./explorer-nodes";
 import { ExplorerToolbar } from "./explorer-toolbar";
 import { ObjectExplorerTree } from "./object-explorer-tree";
 import styles from "./object-explorer.module.css";
 
-export function ObjectExplorer() {
-  const text = localize((texts) => texts.shell.explorer);
-  const controls = localize((texts) => ({
-    ...texts.shell.window,
-    move: texts.shell.explorer.move,
-    close: texts.shell.explorer.close,
-  }));
+export async function ObjectExplorer() {
+  const locale = await pageLocale();
+  const { explorer, window } = getTexts(locale).shell;
 
   return (
     <div className={styles.panel}>
       <div className={styles.header}>
         <h2 id={EXPLORER_TITLE_ID} className={styles.title}>
-          <LocaleText text={mapLocalized(text, (explorer) => explorer.title)} />
+          {explorer.title}
         </h2>
-        <ExplorerControls text={controls} />
+        <ExplorerControls
+          text={{ ...window, move: explorer.move, close: explorer.close }}
+        />
       </div>
       <ExplorerToolbar
-        connectLabel={mapLocalized(text, (explorer) => explorer.connect)}
-        disconnectLabel={mapLocalized(text, (explorer) => explorer.disconnect)}
+        connectLabel={explorer.connect}
+        disconnectLabel={explorer.disconnect}
       />
       <div className={styles.treeScroll}>
         <ObjectExplorerTree
-          nodes={explorerNodes()}
+          nodes={explorerNodes(locale)}
           labelledBy={EXPLORER_TITLE_ID}
         />
       </div>

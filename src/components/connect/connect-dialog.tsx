@@ -11,11 +11,9 @@ import {
 import { useGuide } from "@/components/cheatsheet/guide-context";
 import { CloseIcon, PlugIcon, SpinnerIcon } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { COMPACT_MEDIA_QUERY } from "@/components/shell/breakpoints";
 import { useMediaQuery } from "@/components/shell/use-media-query";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { ByProfile } from "@/content/profiles";
 import type { ConnectText } from "@/content/types";
 import {
@@ -65,8 +63,8 @@ function keepFocusInside(
 }
 
 interface ConnectDialogProps {
-  text: Localized<ConnectText>;
-  login: Localized<ByProfile<string>>;
+  text: ConnectText;
+  login: ByProfile<string>;
 }
 
 function focusedElement(): HTMLElement | null {
@@ -129,8 +127,7 @@ function ConnectWindow({
     };
   }, []);
 
-  const buttons = mapLocalized(text, (entry) => entry.buttons);
-  const current = text[locale];
+  const { buttons } = text;
 
   function cancel() {
     cancelConnection();
@@ -145,16 +142,17 @@ function ConnectWindow({
   function finish(submitted: ConnectFormValues) {
     const record = connectionRecordOf(submitted);
     storeConnection(record);
+    afterConnect(record.profile);
     const language = languageFromParameters(
       submitted.parameters ?? defaultParameters(locale),
     );
     if (language !== null && language !== locale) {
       setLocale(language);
+      return;
     }
     connect();
     applyConnection(record);
     markConnecting(false);
-    afterConnect(record.profile);
   }
 
   function handleSubmit(event: SubmitEvent<HTMLFormElement>) {
@@ -204,7 +202,7 @@ function ConnectWindow({
 
   const loginFields = (
     <LoginFields
-      text={mapLocalized(text, (entry) => entry.login)}
+      text={text.login}
       login={login}
       profile={values.profile}
       onProfileChange={(profile) => setValues({ ...values, profile })}
@@ -224,7 +222,7 @@ function ConnectWindow({
         <div className={styles.titleBar}>
           <PlugIcon />
           <h2 id={titleId} className={styles.title}>
-            <LocaleText text={mapLocalized(text, (entry) => entry.title)} />
+            {text.title}
           </h2>
           <button
             type="button"
@@ -233,14 +231,10 @@ function ConnectWindow({
             onClick={cancel}
           >
             <CloseIcon />
-            <span className="visually-hidden">
-              <LocaleText text={mapLocalized(text, (entry) => entry.close)} />
-            </span>
+            <span className="visually-hidden">{text.close}</span>
           </button>
         </div>
-        <p className={styles.banner}>
-          <LocaleText text={mapLocalized(text, (entry) => entry.brand)} />
-        </p>
+        <p className={styles.banner}>{text.brand}</p>
         <form
           className={styles.form}
           autoComplete="off"
@@ -255,12 +249,12 @@ function ConnectWindow({
             {expanded ? (
               <ConnectOptions
                 stacked={compact}
-                labels={current.tabs}
+                labels={text.tabs}
                 panels={{
                   login: loginFields,
                   connectionProperties: (
                     <ConnectionProperties
-                      text={current.properties}
+                      text={text.properties}
                       values={values}
                       onChange={setValues}
                       onReset={resetAll}
@@ -268,7 +262,7 @@ function ConnectWindow({
                   ),
                   additionalParameters: (
                     <ParametersField
-                      text={current.parameters}
+                      text={text.parameters}
                       value={values.parameters ?? defaultParameters(locale)}
                       onChange={(parameters) =>
                         setValues({ ...values, parameters })
@@ -282,12 +276,10 @@ function ConnectWindow({
             )}
           </fieldset>
           {helpOpen && (
-            <HelpPopover id={helpId} text={current.help} onClose={closeHelp} />
+            <HelpPopover id={helpId} text={text.help} onClose={closeHelp} />
           )}
           <p role="status" className="visually-hidden">
-            {connecting && (
-              <LocaleText text={mapLocalized(buttons, (b) => b.connecting)} />
-            )}
+            {connecting && buttons.connecting}
           </p>
           <div className={styles.buttons}>
             <button
@@ -297,11 +289,7 @@ function ConnectWindow({
               aria-disabled={connecting || undefined}
             >
               {connecting && <SpinnerIcon />}
-              <LocaleText
-                text={mapLocalized(buttons, (b) =>
-                  connecting ? b.connecting : b.connect,
-                )}
-              />
+              {connecting ? buttons.connecting : buttons.connect}
             </button>
             <button
               type="button"
@@ -309,7 +297,7 @@ function ConnectWindow({
               disabled={connecting}
               onClick={cancel}
             >
-              <LocaleText text={mapLocalized(buttons, (b) => b.cancel)} />
+              {buttons.cancel}
             </button>
             <button
               ref={helpButtonRef}
@@ -320,7 +308,7 @@ function ConnectWindow({
               disabled={connecting}
               onClick={() => setHelpOpen(!helpOpen)}
             >
-              <LocaleText text={mapLocalized(buttons, (b) => b.help)} />
+              {buttons.help}
             </button>
             <button
               type="button"
@@ -330,7 +318,7 @@ function ConnectWindow({
               disabled={connecting}
               onClick={toggleOptions}
             >
-              <LocaleText text={mapLocalized(buttons, (b) => b.options)} />
+              {buttons.options}
               <span aria-hidden="true">{expanded ? "<<" : ">>"}</span>
             </button>
           </div>

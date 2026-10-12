@@ -1,4 +1,3 @@
-import { DEFAULT_LOCALE, type Localized } from "@/content/locales";
 import type { Effect } from "@/engine/easter-eggs";
 import type { ExecutionOutcome } from "@/engine/execute";
 import {
@@ -27,7 +26,7 @@ export interface FinishedRun {
   id: number;
   status: "done" | "error" | "canceled";
   origin: "connection" | "user";
-  outcomes: Localized<ExecutionOutcome>;
+  outcome: ExecutionOutcome;
   completedAt: Date | null;
   elapsedMs: number;
 }
@@ -72,7 +71,7 @@ const EMPTY_WORKSPACE: WorkspaceState = {
 };
 
 export function connectionRun(
-  outcomes: Localized<ExecutionOutcome>,
+  outcome: ExecutionOutcome,
   {
     id = 0,
     completedAt = null,
@@ -82,7 +81,7 @@ export function connectionRun(
     id,
     status: "done",
     origin: "connection",
-    outcomes,
+    outcome,
     completedAt,
     elapsedMs: 0,
   };
@@ -90,18 +89,15 @@ export function connectionRun(
 
 export function userRun(
   id: number,
-  outcomes: Localized<ExecutionOutcome>,
+  outcome: ExecutionOutcome,
   completedAt: Date,
   elapsedMs: number,
 ): FinishedRun {
-  const failed = Object.values(outcomes).some(
-    (outcome) => outcome.kind === "error",
-  );
   return {
     id,
-    status: failed ? "error" : "done",
+    status: outcome.kind === "error" ? "error" : "done",
     origin: "user",
-    outcomes,
+    outcome,
     completedAt,
     elapsedMs,
   };
@@ -141,7 +137,7 @@ function startedWith(document: DocumentId): WorkspaceState {
 
 export function initialWorkspace(
   route: Route,
-  outcomes: Localized<ExecutionOutcome> | null,
+  outcome: ExecutionOutcome | null,
 ): WorkspaceState {
   if (route === null) {
     return EMPTY_WORKSPACE;
@@ -151,7 +147,7 @@ export function initialWorkspace(
   }
   return {
     ...startedWith(route),
-    runs: outcomes ? { [route]: connectionRun(outcomes) } : {},
+    runs: outcome ? { [route]: connectionRun(outcome) } : {},
   };
 }
 
@@ -172,10 +168,9 @@ export function nextQueryDocument(
   return queryDocument(withDocument(state, active).queryCount + 1);
 }
 
-function effectOf(run: FinishedRun): RunEffect | null {
-  const outcome = run.outcomes[DEFAULT_LOCALE];
+function effectOf({ id, outcome }: FinishedRun): RunEffect | null {
   return outcome.kind === "results" && outcome.effect
-    ? { id: run.id, kind: outcome.effect }
+    ? { id, kind: outcome.effect }
     : null;
 }
 

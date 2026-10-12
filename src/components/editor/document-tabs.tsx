@@ -11,7 +11,6 @@ import {
 import { useCommands } from "@/components/commands/command-context";
 import { CaretDownIcon, CloseIcon, PinIcon } from "@/components/icons";
 import { arrowTarget } from "@/components/interaction";
-import { LocaleText } from "@/components/locale/locale-text";
 import { MenuButton } from "@/components/menu/menu-button";
 import {
   DOCUMENT_PANEL_ID,
@@ -24,7 +23,6 @@ import {
 } from "@/components/shell/section-routes";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { neighborAfterClose } from "@/components/shell/workspace-state";
-import type { Localized } from "@/content/locales";
 import styles from "./editor.module.css";
 
 const NEW_QUERY_SELECTOR = '[data-tour="new-query"]';
@@ -48,8 +46,8 @@ function revealInStrip(tab: HTMLElement) {
 }
 
 interface DocumentTabsProps {
-  label: Localized;
-  openTabsLabel: Localized;
+  label: string;
+  openTabsLabel: string;
 }
 
 export function DocumentTabs({
@@ -128,7 +126,7 @@ export function DocumentTabs({
   return (
     <div className={styles.tabStrip}>
       <span id={labelId} className="visually-hidden">
-        <LocaleText text={label} />
+        {label}
       </span>
       <div
         role="tablist"
@@ -193,7 +191,7 @@ export function DocumentTabs({
         })}
       </div>
       <MenuButton
-        label={<LocaleText text={openTabsLabel} />}
+        label={openTabsLabel}
         className={styles.stripMenu}
         triggerData={{ "data-open-tabs": "" }}
         items={() =>

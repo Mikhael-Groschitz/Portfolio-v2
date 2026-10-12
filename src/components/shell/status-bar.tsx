@@ -11,9 +11,7 @@ import {
 } from "@/components/icons";
 import { useOutsidePointerDown } from "@/components/interaction";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { getTexts } from "@/content";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { StatusText } from "@/content/types";
 import { useWorkspace } from "./workspace-context";
 import type { Run } from "./workspace-state";
@@ -35,15 +33,13 @@ function statusOf(run: Run | null, connecting: boolean): StatusKey {
   return run?.status === "error" ? "failed" : "ready";
 }
 
-function Tips({ text }: Readonly<{ text: Localized<StatusText> }>) {
-  const { locale } = useLanguage();
+function Tips({ text }: Readonly<{ text: StatusText }>) {
   const [open, setOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const labelId = useId();
   const panelId = useId();
   const titleId = useId();
-  const current = text[locale];
 
   useOutsidePointerDown(wrapperRef, open, () => setOpen(false));
 
@@ -60,7 +56,7 @@ function Tips({ text }: Readonly<{ text: Localized<StatusText> }>) {
       }}
     >
       <span id={labelId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (entry) => entry.notifications)} />
+        {text.notifications}
       </span>
       <button
         ref={buttonRef}
@@ -82,10 +78,10 @@ function Tips({ text }: Readonly<{ text: Localized<StatusText> }>) {
           className={styles.tipsPanel}
         >
           <h2 id={titleId} className={styles.tipsTitle}>
-            {current.tipsTitle}
+            {text.tipsTitle}
           </h2>
           <ul className={styles.tipsList}>
-            {current.tips.map((tip) => (
+            {text.tips.map((tip) => (
               <li key={tip}>{tip}</li>
             ))}
           </ul>
@@ -95,7 +91,7 @@ function Tips({ text }: Readonly<{ text: Localized<StatusText> }>) {
   );
 }
 
-export function StatusBar({ text }: Readonly<{ text: Localized<StatusText> }>) {
+export function StatusBar({ text }: Readonly<{ text: StatusText }>) {
   const { activeRun } = useWorkspace();
   const connecting = useConnecting();
   const { locale } = useLanguage();
@@ -106,7 +102,7 @@ export function StatusBar({ text }: Readonly<{ text: Localized<StatusText> }>) {
     <footer className={styles.statusBar}>
       <ReadyIcon />
       <span className={styles.statusText} data-status={status}>
-        <LocaleText text={mapLocalized(text, (entry) => entry[status])} />
+        {text[status]}
       </span>
       <a
         href={REPOSITORY_URL}
@@ -117,15 +113,11 @@ export function StatusBar({ text }: Readonly<{ text: Localized<StatusText> }>) {
         data-repository=""
       >
         <RepositoryIcon />
-        <span className={styles.repositoryLabel}>
-          <LocaleText text={mapLocalized(text, (entry) => entry.repository)} />
-        </span>
+        <span className={styles.repositoryLabel}>{text.repository}</span>
         <ChevronIcon direction="up" size={12} />
         <span className="visually-hidden">
           {" ("}
-          <LocaleText
-            text={mapLocalized(text, (entry) => entry.repositoryHint)}
-          />
+          {text.repositoryHint}
           {`, ${newTab})`}
         </span>
       </a>

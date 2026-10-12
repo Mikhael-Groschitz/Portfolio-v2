@@ -14,7 +14,6 @@ import {
 } from "react";
 import { useCommands } from "@/components/commands/command-context";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { documentTabId } from "@/components/shell/element-ids";
 import {
   type QueryDocumentId,
@@ -22,7 +21,6 @@ import {
 } from "@/components/shell/section-routes";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { getTexts } from "@/content";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { QueryText } from "@/content/types";
 import { catalogIdentifiers } from "@/engine/catalog";
 import { MAX_QUERY_LENGTH } from "@/engine/execute";
@@ -55,7 +53,7 @@ const IDENTIFIERS = catalogIdentifiers();
 interface QueryDocumentProps {
   documentId: QueryDocumentId;
   query: QueryStore;
-  text: Localized<QueryText>;
+  text: QueryText;
 }
 
 interface FindState {
@@ -103,9 +101,7 @@ function revealOffset(
   }
 }
 
-export function QueryEditor({
-  text,
-}: Readonly<{ text: Localized<QueryText> }>) {
+export function QueryEditor({ text }: Readonly<{ text: QueryText }>) {
   const { activeDocument, queryStore } = useWorkspace();
   if (activeDocument === null || !isQueryDocument(activeDocument)) {
     return null;
@@ -392,7 +388,7 @@ function QueryDocument({
         className={styles.editor}
       >
         <span id={labelId} className="visually-hidden">
-          <LocaleText text={mapLocalized(text, (entry) => entry.editorLabel)} />
+          {text.editorLabel}
         </span>
         <div className={styles.gutter} aria-hidden="true">
           {lines.map((_, index) => (
@@ -436,9 +432,7 @@ function QueryDocument({
           </pre>
           {empty && (
             <p id={hintId} className={styles.placeholder}>
-              <LocaleText
-                text={mapLocalized(text, (entry) => entry.placeholder)}
-              />
+              {text.placeholder}
             </p>
           )}
           <textarea
@@ -469,7 +463,7 @@ function QueryDocument({
             <CompletionList
               id={listId}
               completion={completion}
-              text={text[locale]}
+              text={text}
               onPick={accept}
             />
           )}

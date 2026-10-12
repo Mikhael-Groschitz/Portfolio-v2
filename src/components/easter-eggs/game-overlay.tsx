@@ -2,9 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useId, useRef } from "react";
-import { useLanguage } from "@/components/locale/language-context";
 import { useMediaQuery } from "@/components/shell/use-media-query";
-import type { Localized } from "@/content/locales";
 import type { GameOverlayText } from "@/content/types";
 import { GAME_TITLE } from "@/game/title";
 import { useEasterEggs } from "./easter-egg-context";
@@ -82,13 +80,10 @@ function GameLayer({
   );
 }
 
-export function GameOverlay({
-  text,
-}: Readonly<{ text: Localized<GameOverlayText> }>) {
+export function GameOverlay({ text }: Readonly<{ text: GameOverlayText }>) {
   const { playing, exitGame } = useEasterEggs();
-  const { locale } = useLanguage();
   if (!playing) {
     return null;
   }
-  return <GameLayer text={text[locale]} onExit={exitGame} />;
+  return <GameLayer text={text} onExit={exitGame} />;
 }

@@ -1,6 +1,4 @@
 import { useId } from "react";
-import { LocaleText } from "@/components/locale/locale-text";
-import { LOCALES, type Localized, mapLocalized } from "@/content/locales";
 import {
   type ByProfile,
   PROFILES,
@@ -17,8 +15,8 @@ const MASKED_PASSWORD = "••••••••";
 type LoginText = ConnectText["login"];
 
 interface LoginFieldsProps {
-  text: Localized<LoginText>;
-  login: Localized<ByProfile<string>>;
+  text: LoginText;
+  login: ByProfile<string>;
   profile: Profile;
   onProfileChange: (profile: Profile) => void;
 }
@@ -31,39 +29,21 @@ export function LoginFields({
 }: Readonly<LoginFieldsProps>) {
   const id = useId();
 
-  function label(pick: (entry: LoginText) => string) {
-    return <LocaleText text={mapLocalized(text, pick)} />;
-  }
-
   return (
     <>
       <fieldset className={styles.group}>
-        <legend className={styles.legend}>
-          {label((entry) => entry.server)}
-        </legend>
-        <FieldRow
-          label={label((entry) => entry.serverType)}
-          labelId={`${id}-type`}
-          disabled
-        >
-          {LOCALES.map((locale) => (
-            <select
-              key={locale}
-              lang={locale}
-              data-locale-block={locale}
-              className={styles.input}
-              aria-labelledby={`${id}-type`}
-              defaultValue="engine"
-              disabled
-            >
-              <option value="engine">{text[locale].serverTypeValue}</option>
-            </select>
-          ))}
+        <legend className={styles.legend}>{text.server}</legend>
+        <FieldRow label={text.serverType} labelId={`${id}-type`} disabled>
+          <select
+            className={styles.input}
+            aria-labelledby={`${id}-type`}
+            defaultValue="engine"
+            disabled
+          >
+            <option value="engine">{text.serverTypeValue}</option>
+          </select>
         </FieldRow>
-        <FieldRow
-          label={label((entry) => entry.serverName)}
-          labelId={`${id}-name`}
-        >
+        <FieldRow label={text.serverName} labelId={`${id}-name`}>
           <input
             className={styles.input}
             aria-labelledby={`${id}-name`}
@@ -72,52 +52,34 @@ export function LoginFields({
             readOnly
           />
         </FieldRow>
-        <FieldRow
-          label={label((entry) => entry.authentication)}
-          labelId={`${id}-authentication`}
-        >
-          {LOCALES.map((locale) => (
-            <select
-              key={locale}
-              lang={locale}
-              data-locale-block={locale}
-              className={styles.input}
-              aria-labelledby={`${id}-authentication`}
-              value={profile}
-              onChange={(event) => {
-                if (isProfile(event.target.value)) {
-                  onProfileChange(event.target.value);
-                }
-              }}
-            >
-              {PROFILES.map((option) => (
-                <option key={option} value={option}>
-                  {text[locale].profiles[option]}
-                </option>
-              ))}
-            </select>
-          ))}
+        <FieldRow label={text.authentication} labelId={`${id}-authentication`}>
+          <select
+            className={styles.input}
+            aria-labelledby={`${id}-authentication`}
+            value={profile}
+            onChange={(event) => {
+              if (isProfile(event.target.value)) {
+                onProfileChange(event.target.value);
+              }
+            }}
+          >
+            {PROFILES.map((option) => (
+              <option key={option} value={option}>
+                {text.profiles[option]}
+              </option>
+            ))}
+          </select>
+        </FieldRow>
+        <FieldRow label={text.userName} labelId={`${id}-user`} indent disabled>
+          <input
+            className={styles.input}
+            aria-labelledby={`${id}-user`}
+            value={login[profile]}
+            disabled
+          />
         </FieldRow>
         <FieldRow
-          label={label((entry) => entry.userName)}
-          labelId={`${id}-user`}
-          indent
-          disabled
-        >
-          {LOCALES.map((locale) => (
-            <input
-              key={locale}
-              lang={locale}
-              data-locale-block={locale}
-              className={styles.input}
-              aria-labelledby={`${id}-user`}
-              value={login[locale][profile]}
-              disabled
-            />
-          ))}
-        </FieldRow>
-        <FieldRow
-          label={label((entry) => entry.password)}
+          label={text.password}
           labelId={`${id}-password`}
           indent
           disabled
@@ -129,37 +91,22 @@ export function LoginFields({
             disabled
           />
         </FieldRow>
-        <DisabledCheckRow label={label((entry) => entry.rememberPassword)} />
+        <DisabledCheckRow label={text.rememberPassword} />
       </fieldset>
       <fieldset className={styles.group}>
-        <legend className={styles.legend}>
-          {label((entry) => entry.security)}
-        </legend>
-        <FieldRow
-          label={label((entry) => entry.encryption)}
-          labelId={`${id}-encryption`}
-          disabled
-        >
-          {LOCALES.map((locale) => (
-            <select
-              key={locale}
-              lang={locale}
-              data-locale-block={locale}
-              className={styles.input}
-              aria-labelledby={`${id}-encryption`}
-              defaultValue="optional"
-              disabled
-            >
-              <option value="optional">{text[locale].encryptionValue}</option>
-            </select>
-          ))}
+        <legend className={styles.legend}>{text.security}</legend>
+        <FieldRow label={text.encryption} labelId={`${id}-encryption`} disabled>
+          <select
+            className={styles.input}
+            aria-labelledby={`${id}-encryption`}
+            defaultValue="optional"
+            disabled
+          >
+            <option value="optional">{text.encryptionValue}</option>
+          </select>
         </FieldRow>
-        <DisabledCheckRow label={label((entry) => entry.trustCertificate)} />
-        <FieldRow
-          label={label((entry) => entry.hostName)}
-          labelId={`${id}-host`}
-          disabled
-        >
+        <DisabledCheckRow label={text.trustCertificate} />
+        <FieldRow label={text.hostName} labelId={`${id}-host`} disabled>
           <input
             className={styles.input}
             aria-labelledby={`${id}-host`}

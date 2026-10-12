@@ -2,7 +2,6 @@
 
 import { useId, useSyncExternalStore } from "react";
 import { CheckCircleIcon } from "@/components/icons";
-import { LocaleText } from "@/components/locale/locale-text";
 import {
   ZOOM_LEVELS,
   isZoom,
@@ -14,16 +13,13 @@ import {
 } from "@/components/preferences/preferences-store";
 import { isQueryDocument } from "@/components/shell/section-routes";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { ShellText } from "@/content/types";
 import { createQueryStore, cursorOf } from "./query-store";
 import styles from "./editor.module.css";
 
 const READ_ONLY = createQueryStore();
 
-export function EditorBar({
-  text,
-}: Readonly<{ text: Localized<ShellText["editor"]> }>) {
+export function EditorBar({ text }: Readonly<{ text: ShellText["editor"] }>) {
   const { activeDocument, queryStore } = useWorkspace();
   const store =
     activeDocument !== null && isQueryDocument(activeDocument)
@@ -44,7 +40,7 @@ export function EditorBar({
   return (
     <div className={styles.editorBar} data-editor-bar="">
       <label htmlFor={zoomId} className="visually-hidden">
-        <LocaleText text={mapLocalized(text, (editor) => editor.zoom)} />
+        {text.zoom}
       </label>
       <select
         id={zoomId}
@@ -67,15 +63,15 @@ export function EditorBar({
       </select>
       <span className={styles.issues}>
         <CheckCircleIcon size={14} />
-        <LocaleText text={mapLocalized(text, (editor) => editor.noIssues)} />
+        {text.noIssues}
       </span>
       <span className={styles.position}>
         <span>
-          <LocaleText text={mapLocalized(text, (editor) => editor.line)} />
+          {text.line}
           {`: ${cursor.line}`}
         </span>
         <span>
-          <LocaleText text={mapLocalized(text, (editor) => editor.column)} />
+          {text.column}
           {`: ${cursor.column}`}
         </span>
       </span>

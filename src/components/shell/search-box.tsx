@@ -21,10 +21,8 @@ import { useConnectionStatus } from "@/components/connect/use-connection-status"
 import { CaretDownIcon, SearchIcon } from "@/components/icons";
 import { useOutsidePointerDown } from "@/components/interaction";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { formatCount } from "@/content/format";
 import { getTexts } from "@/content";
-import type { Localized } from "@/content/locales";
 import type { CommandId, SectionId } from "@/content/types";
 import { CATALOG } from "@/engine/catalog";
 import { commandFor } from "@/engine/hints";
@@ -63,7 +61,7 @@ function isSearchShortcut(event: globalThis.KeyboardEvent): boolean {
   );
 }
 
-export function SearchBox({ label }: Readonly<{ label: Localized }>) {
+export function SearchBox({ label }: Readonly<{ label: string }>) {
   const { locale } = useLanguage();
   const commands = useCommands();
   const workspace = useWorkspace();
@@ -212,7 +210,7 @@ export function SearchBox({ label }: Readonly<{ label: Localized }>) {
   return (
     <div ref={wrapperRef} className={styles.searchWrapper}>
       <span id={labelId} className="visually-hidden">
-        <LocaleText text={label} />
+        {label}
       </span>
       <button
         ref={triggerRef}
@@ -232,7 +230,7 @@ export function SearchBox({ label }: Readonly<{ label: Localized }>) {
       >
         <SearchIcon />
         <span className={styles.searchLabel} aria-hidden="true">
-          <LocaleText text={label} />
+          {label}
         </span>
         <CaretDownIcon className={styles.searchCaret} />
       </button>

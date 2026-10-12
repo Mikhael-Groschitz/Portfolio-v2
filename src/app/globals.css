@@ -26,11 +26,6 @@ a {
   outline-offset: 2px;
 }
 
-html:not([data-locale="en"]) [data-locale-block="en"],
-html[data-locale="en"] [data-locale-block="pt-BR"] {
-  display: none;
-}
-
 html:not([data-profile="dev"]) [data-profile-block="dev"],
 html[data-profile="dev"] [data-profile-block="visitor"] {
   display: none;
@@ -51,6 +46,34 @@ html[data-profile="dev"] [data-profile-block="visitor"] {
   clip-path: inset(50%);
   border: 0;
   white-space: nowrap;
+}
+
+.not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 16px;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 48px 16px;
+}
+
+.not-found-title {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.not-found-message {
+  align-self: stretch;
+  margin: 0;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  background: var(--bg-editor);
+  color: var(--text-error);
+  font-family: var(--font-code);
+  font-size: 13px;
+  white-space: pre-wrap;
 }
 
 html[data-dragging="vertical"],

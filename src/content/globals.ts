@@ -166,6 +166,18 @@ export const texts: Record<Locale, Texts> = {
     seo: {
       description:
         "Portfólio de {name}, analista de dados backend na Credware, com pós-graduação pela PUCPR em Arquitetura de Software, Ciência de Dados e Cybersegurança.",
+      keywords: [
+        "Engenheiro de Dados",
+        "Data Engineer",
+        "Data Engineering",
+        "Arquitetura de Dados",
+        "Ciência de Dados",
+        "PUCPR",
+        "Cybersecurity",
+        "Next.js",
+        "Porto Alegre",
+        "Mikhael Groschitz",
+      ],
       sections: {
         about:
           "Quem é {name}: engenharia de dados em SQL Server e Azure, com modelagem, pipelines ETL/ELT, otimização de T-SQL e automação em Python.",
@@ -387,6 +399,10 @@ export const texts: Record<Locale, Texts> = {
         start: "Clique em Nova Consulta para começar.",
         noScript:
           "O JavaScript está desligado, então a janela fica só para leitura. As tabelas do Pesquisador de Objetos continuam abrindo como links.",
+      },
+      notFound: {
+        title: "Página não encontrada",
+        back: "Voltar para o início",
       },
       scripts: {
         about: [
@@ -828,6 +844,18 @@ export const texts: Record<Locale, Texts> = {
     seo: {
       description:
         "Portfolio of {name}, backend data analyst at Credware, with a postgraduate degree from PUCPR in Software Architecture, Data Science and Cybersecurity.",
+      keywords: [
+        "Data Engineer",
+        "Engenheiro de Dados",
+        "Data Engineering",
+        "Data Architecture",
+        "Data Science",
+        "PUCPR",
+        "Cybersecurity",
+        "Next.js",
+        "Porto Alegre",
+        "Mikhael Groschitz",
+      ],
       sections: {
         about:
           "Who {name} is: data engineering with SQL Server and Azure, covering data modeling, ETL/ELT pipelines, T-SQL tuning and Python automation.",
@@ -1049,6 +1077,10 @@ export const texts: Record<Locale, Texts> = {
         start: "Click New Query to get started.",
         noScript:
           "JavaScript is turned off, so the window is read-only. The tables in Object Explorer still open as links.",
+      },
+      notFound: {
+        title: "Page not found",
+        back: "Back to the start",
       },
       scripts: {
         about: [

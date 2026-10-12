@@ -1,23 +1,8 @@
 "use client";
 
-import {
-  type ReactNode,
-  createContext,
-  useCallback,
-  useContext,
-  useLayoutEffect,
-  useMemo,
-  useSyncExternalStore,
-} from "react";
-import { DEFAULT_LOCALE, type Locale } from "@/content/locales";
-import {
-  applyLocale,
-  readAppliedLocale,
-  readStoredLocale,
-  resolveInitialLocale,
-  storeLocale,
-  subscribeToLocale,
-} from "./locale-runtime";
+import { type ReactNode, createContext, useContext, useMemo } from "react";
+import type { Locale } from "@/content/locales";
+import { localeCookie, localizedPath } from "./locale-routing";
 
 interface LanguageContextValue {
   locale: Locale;
@@ -26,27 +11,28 @@ interface LanguageContextValue {
 
 const LanguageContext = createContext<LanguageContextValue | null>(null);
 
-function readServerLocale(): Locale {
-  return DEFAULT_LOCALE;
+function openTwinPage(locale: Locale) {
+  document.cookie = localeCookie(locale);
+  const twin = new URL(window.location.href);
+  twin.pathname = localizedPath(twin.pathname, locale);
+  window.location.assign(twin);
 }
 
-export function LanguageProvider({ children }: { children: ReactNode }) {
-  const locale = useSyncExternalStore(
-    subscribeToLocale,
-    readAppliedLocale,
-    readServerLocale,
+export function LanguageProvider({
+  locale,
+  children,
+}: Readonly<{ locale: Locale; children: ReactNode }>) {
+  const value = useMemo(
+    () => ({
+      locale,
+      setLocale: (next: Locale) => {
+        if (next !== locale) {
+          openTwinPage(next);
+        }
+      },
+    }),
+    [locale],
   );
-
-  useLayoutEffect(() => {
-    applyLocale(resolveInitialLocale(readStoredLocale(), navigator.languages));
-  }, []);
-
-  const setLocale = useCallback((next: Locale) => {
-    applyLocale(next);
-    storeLocale(next);
-  }, []);
-
-  const value = useMemo(() => ({ locale, setLocale }), [locale, setLocale]);
 
   return <LanguageContext value={value}>{children}</LanguageContext>;
 }

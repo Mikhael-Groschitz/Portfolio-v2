@@ -2,8 +2,6 @@
 
 import { useId } from "react";
 import { ChevronIcon, MaximizeIcon, RestoreIcon } from "@/components/icons";
-import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { DOCUMENT_PANEL_ID } from "@/components/shell/element-ids";
 import {
   RESULTS_SHARE,
@@ -14,7 +12,6 @@ import {
 import { updateLayout } from "@/components/shell/layout-store";
 import { useLayout } from "@/components/shell/use-layout";
 import { Splitter } from "@/components/shell/splitter";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { ResultsText } from "@/content/types";
 import styles from "./results.module.css";
 
@@ -27,9 +24,8 @@ function percent(share: number): number {
 export function ResultsSplitter({
   text,
   controls,
-}: Readonly<{ text: Localized<ResultsText>; controls: string }>) {
+}: Readonly<{ text: ResultsText; controls: string }>) {
   const { share } = useLayout().results;
-  const { locale } = useLanguage();
   const value = percent(share);
 
   function moveTo(clientY: number) {
@@ -52,7 +48,7 @@ export function ResultsSplitter({
     <Splitter
       orientation="horizontal"
       keys={{ decrease: "ArrowDown", increase: "ArrowUp" }}
-      label={text[locale].resize}
+      label={text.resize}
       controls={controls}
       value={value}
       min={percent(RESULTS_SHARE.min)}
@@ -84,9 +80,7 @@ export function ResultsSplitter({
   );
 }
 
-export function ResultsControls({
-  text,
-}: Readonly<{ text: Localized<ResultsText> }>) {
+export function ResultsControls({ text }: Readonly<{ text: ResultsText }>) {
   const { state } = useLayout().results;
   const collapsed = state === "collapsed";
   const maximized = state === "maximized";
@@ -96,11 +90,7 @@ export function ResultsControls({
   return (
     <div className={styles.controls}>
       <span id={collapseId} className="visually-hidden">
-        <LocaleText
-          text={mapLocalized(text, (entry) =>
-            collapsed ? entry.expand : entry.collapse,
-          )}
-        />
+        {collapsed ? text.expand : text.collapse}
       </span>
       <button
         type="button"
@@ -114,11 +104,7 @@ export function ResultsControls({
         <ChevronIcon direction={collapsed ? "up" : "down"} />
       </button>
       <span id={maximizeId} className="visually-hidden">
-        <LocaleText
-          text={mapLocalized(text, (entry) =>
-            maximized ? entry.restore : entry.maximize,
-          )}
-        />
+        {maximized ? text.restore : text.maximize}
       </span>
       <button
         type="button"

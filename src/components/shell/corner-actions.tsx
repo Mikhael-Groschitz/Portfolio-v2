@@ -2,20 +2,16 @@
 
 import { CaretDownIcon, FeedbackIcon, ShareIcon } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { MenuButton } from "@/components/menu/menu-button";
 import { CommandButton } from "@/components/toolbar/command-button";
 import toolbar from "@/components/toolbar/toolbar.module.css";
 import { getTexts } from "@/content";
-import { type Localized, mapLocalized } from "@/content/locales";
 import type { CornerText } from "@/content/types";
 import styles from "./toolbar.module.css";
 
 const WEB_URL = /^https?:\/\//;
 
-export function CornerActions({
-  text,
-}: Readonly<{ text: Localized<CornerText> }>) {
+export function CornerActions({ text }: Readonly<{ text: CornerText }>) {
   const { locale } = useLanguage();
   const texts = getTexts(locale);
 
@@ -29,9 +25,7 @@ export function CornerActions({
           data={{ "data-contact": "" }}
         />
         <MenuButton
-          label={
-            <LocaleText text={mapLocalized(text, (entry) => entry.channels)} />
-          }
+          label={text.channels}
           className={`${toolbar.button} ${styles.split}`}
           triggerData={{ "data-contact-channels": "" }}
           items={() =>

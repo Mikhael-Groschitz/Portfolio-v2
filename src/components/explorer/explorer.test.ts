@@ -16,7 +16,7 @@ function leaves(nodes: readonly TreeNode[]): TreeNode[] {
 }
 
 describe("explorerNodes", () => {
-  const nodes = explorerNodes();
+  const nodes = explorerNodes("pt-BR");
 
   it("shows every catalog object once, by its qualified name", () => {
     expect(leaves(nodes).map((node) => node.label)).toEqual(
@@ -32,9 +32,21 @@ describe("explorerNodes", () => {
 
   it("names the server with the login of each profile", () => {
     expect(nodes[0].label).toMatchObject({
-      visitor: { "pt-BR": expect.stringMatching(/ - visitante\)$/) },
-      dev: { en: expect.stringMatching(/ - dev\)$/) },
+      visitor: expect.stringMatching(/ - visitante\)$/),
+      dev: expect.stringMatching(/ - dev\)$/),
     });
+    expect(explorerNodes("en")[0].label).toMatchObject({
+      visitor: expect.stringMatching(/ - visitor\)$/),
+    });
+  });
+
+  it("links each object to the page in the same language", () => {
+    expect(leaves(nodes).map((node) => node.href)).toEqual(
+      CATALOG.map((object) => `/${object.section}`),
+    );
+    expect(leaves(explorerNodes("en")).map((node) => node.href)).toEqual(
+      CATALOG.map((object) => `/en/${object.section}`),
+    );
   });
 
   it("nests tables and procedures under the Portfolio database", () => {

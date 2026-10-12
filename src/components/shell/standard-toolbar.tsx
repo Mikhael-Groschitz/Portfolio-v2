@@ -18,7 +18,6 @@ import {
   UndoIcon,
 } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { MenuButton, type PopupMenuItem } from "@/components/menu/menu-button";
 import { CommandButton } from "@/components/toolbar/command-button";
 import { commandMenuItem } from "@/components/toolbar/command-menu-item";
@@ -28,7 +27,6 @@ import {
 } from "@/components/toolbar/toolbar-strip";
 import styles from "@/components/toolbar/toolbar.module.css";
 import { getTexts } from "@/content";
-import { byLocale } from "@/content/locales";
 import type { CommandId } from "@/content/types";
 import { ExplorerToggle } from "./explorer-toggle";
 import { backVisits } from "./navigation-history";
@@ -53,15 +51,13 @@ function SplitButton({
   items,
   disabled,
 }: Readonly<SplitProps>) {
+  const { locale } = useLanguage();
+
   return (
     <>
       <CommandButton command={command} icon={icon} />
       <MenuButton
-        label={
-          <LocaleText
-            text={byLocale((locale) => getTexts(locale).shell.toolbar[list])}
-          />
-        }
+        label={getTexts(locale).shell.toolbar[list]}
         className={`${styles.button} ${styles.caret}`}
         items={items}
         disabled={disabled}
@@ -123,11 +119,7 @@ export function StandardToolbar() {
       key: "explorer",
       compactOnly: true,
       essential: true,
-      render: () => (
-        <ExplorerToggle
-          label={byLocale((current) => getTexts(current).shell.explorer.title)}
-        />
-      ),
+      render: () => <ExplorerToggle label={texts.explorer.title} />,
     },
     {
       key: "back",
@@ -213,11 +205,7 @@ export function StandardToolbar() {
   return (
     <ToolbarStrip
       label={texts.toolbar.standard}
-      moreLabel={
-        <LocaleText
-          text={byLocale((current) => getTexts(current).shell.toolbar.more)}
-        />
-      }
+      moreLabel={texts.toolbar.more}
       entries={entries}
       compactExtras={() => [item("contact"), item("share")]}
       trailing={() => [item("customizeToolbar")]}

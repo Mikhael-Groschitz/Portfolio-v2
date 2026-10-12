@@ -9,7 +9,6 @@ import {
 } from "react";
 import { GridIcon, MessagesIcon, ResultsTextIcon } from "@/components/icons";
 import { arrowTarget } from "@/components/interaction";
-import { LocaleBlocks, LocaleText } from "@/components/locale/locale-text";
 import { expandResults } from "@/components/shell/layout-model";
 import type { ResultsFormat } from "@/components/shell/layout-model";
 import { updateLayout } from "@/components/shell/layout-store";
@@ -17,7 +16,6 @@ import { useLayout } from "@/components/shell/use-layout";
 import { useLoadedAt } from "@/components/shell/use-loaded-at";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { type Run, isProvisional } from "@/components/shell/workspace-state";
-import type { Localized } from "@/content/locales";
 import type { ResultsText } from "@/content/types";
 import { resultSetsOf } from "@/engine/execute";
 import { MessagesPane } from "./messages-pane";
@@ -47,8 +45,8 @@ const VIEW_CLASSES: Record<ResultsView, string> = {
 };
 
 interface ResultsPanelProps {
-  labels: Record<ResultsView | "heading", Localized>;
-  text: Localized<ResultsText>;
+  labels: Record<ResultsView | "heading", string>;
+  text: ResultsText;
 }
 
 interface RunViewsProps extends ResultsPanelProps {
@@ -61,7 +59,7 @@ function viewsOf(run: Run): readonly ResultsView[] {
     return VIEWS;
   }
   const hasGrids =
-    run.status === "done" && resultSetsOf(run.outcomes["pt-BR"]).length > 0;
+    run.status === "done" && resultSetsOf(run.outcome).length > 0;
   return hasGrids ? VIEWS : ["messages"];
 }
 
@@ -102,41 +100,37 @@ function RunViews({ run, headingId, labels, text }: Readonly<RunViewsProps>) {
       completedAt: run.completedAt ?? loadedAt,
       elapsedMs: run.elapsedMs,
     };
+    const { outcome } = run;
+    if (view === "messages") {
+      return (
+        <div className={styles.outcome}>
+          <MessagesPane outcome={outcome} text={text} timing={timing} />
+        </div>
+      );
+    }
+    if (format === "text") {
+      return (
+        <div className={styles.outcome}>
+          <pre
+            className={styles.textResults}
+            tabIndex={0}
+            aria-label={text.textResults}
+            data-text-results=""
+          >
+            {resultsAsText(resultSetsOf(outcome), text)}
+          </pre>
+        </div>
+      );
+    }
     return (
-      <LocaleBlocks>
-        {(locale) => {
-          const outcome = run.outcomes[locale];
-          if (view === "messages") {
-            return (
-              <MessagesPane
-                outcome={outcome}
-                text={text[locale]}
-                timing={timing}
-              />
-            );
-          }
-          if (format === "text") {
-            return (
-              <pre
-                className={styles.textResults}
-                tabIndex={0}
-                aria-label={text[locale].textResults}
-                data-text-results=""
-              >
-                {resultsAsText(resultSetsOf(outcome), text[locale])}
-              </pre>
-            );
-          }
-          return (
-            <ResultSets
-              sets={resultSetsOf(outcome)}
-              shares={shares}
-              onShares={setShares}
-              text={text[locale]}
-            />
-          );
-        }}
-      </LocaleBlocks>
+      <div className={styles.outcome}>
+        <ResultSets
+          sets={resultSetsOf(outcome)}
+          shares={shares}
+          onShares={setShares}
+          text={text}
+        />
+      </div>
     );
   }
 
@@ -173,7 +167,7 @@ function RunViews({ run, headingId, labels, text }: Readonly<RunViewsProps>) {
               }}
             >
               {viewIcon(view, format)}
-              <LocaleText text={labels[view]} />
+              {labels[view]}
             </button>
           ))}
         </div>
@@ -211,7 +205,7 @@ export function ResultsPanel(props: Readonly<ResultsPanelProps>) {
     >
       <ResultsSplitter text={props.text} controls={panelId} />
       <h2 id={headingId} className="visually-hidden">
-        <LocaleText text={props.labels.heading} />
+        {props.labels.heading}
       </h2>
       <RunViews
         key={`${activeDocument}-${activeRun.id}`}

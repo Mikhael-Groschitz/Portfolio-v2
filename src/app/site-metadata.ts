@@ -1,12 +1,7 @@
 import type { Metadata } from "next";
+import { localizedPath } from "@/components/locale/locale-routing";
 import { getTexts } from "@/content";
-import {
-  DEFAULT_LOCALE,
-  LOCALES,
-  type Locale,
-  type Localized,
-  byLocale,
-} from "@/content/locales";
+import { DEFAULT_LOCALE, LOCALES, type Locale } from "@/content/locales";
 import { SECTION_IDS, type SectionId, type Texts } from "@/content/types";
 
 export const SITE_URL = "https://mgroschitz.dev";
@@ -14,12 +9,6 @@ export const SITE_URL = "https://mgroschitz.dev";
 export const HOME_PAGE = "home";
 
 export type SitePage = typeof HOME_PAGE | SectionId | "query";
-
-export const SITE_PAGES: readonly SitePage[] = [
-  HOME_PAGE,
-  ...SECTION_IDS,
-  "query",
-];
 
 export const INDEXED_PAGES: readonly SitePage[] = [HOME_PAGE, ...SECTION_IDS];
 
@@ -57,47 +46,47 @@ export function pageDescription(page: SitePage, texts: Texts): string {
   return withName(seo.sections[page], texts);
 }
 
+export function titleTemplate(texts: Texts): string {
+  return `%s | ${texts.about.name}`;
+}
+
 export function imageAlt(texts: Texts): string {
   return withName(texts.seo.imageAlt, texts);
 }
 
-export function canonicalPath(page: SitePage): string {
-  return page === HOME_PAGE ? "/" : `/${page}`;
+export function pagePath(page: SitePage, locale: Locale): string {
+  return localizedPath(page === HOME_PAGE ? "/" : `/${page}`, locale);
 }
 
-export function pageMetadata(page: SitePage): Metadata {
-  const texts = getTexts(DEFAULT_LOCALE);
+export function pageAlternates(page: SitePage): Record<string, string> {
   return {
-    title: pageTitle(page, texts),
+    ...Object.fromEntries(
+      LOCALES.map((locale) => [locale, pagePath(page, locale)]),
+    ),
+    "x-default": pagePath(page, DEFAULT_LOCALE),
+  };
+}
+
+export function pageMetadata(page: SitePage, locale: Locale): Metadata {
+  const texts = getTexts(locale);
+  return {
+    title:
+      page === HOME_PAGE
+        ? { absolute: pageTitle(page, texts) }
+        : pageLabel(page, texts),
     description: pageDescription(page, texts),
-    alternates: { canonical: canonicalPath(page) },
-  };
-}
-
-export function siteMetadata(): Metadata {
-  const texts = getTexts(DEFAULT_LOCALE);
-  return {
-    metadataBase: new URL(SITE_URL),
-    title: pageTitle(HOME_PAGE, texts),
-    description: pageDescription(HOME_PAGE, texts),
-    authors: [{ name: texts.about.name, url: SITE_URL }],
-    openGraph: {
-      type: "website",
-      siteName: texts.about.name,
-      locale: OPEN_GRAPH_LOCALES[DEFAULT_LOCALE],
-      alternateLocale: LOCALES.filter(
-        (locale) => locale !== DEFAULT_LOCALE,
-      ).map((locale) => OPEN_GRAPH_LOCALES[locale]),
+    alternates: {
+      canonical: pagePath(page, locale),
+      languages: pageAlternates(page),
     },
-    twitter: { card: "summary_large_image" },
   };
 }
 
-export function pageTitlesByPath(): Record<string, Localized> {
-  return Object.fromEntries(
-    SITE_PAGES.map((page) => [
-      canonicalPath(page),
-      byLocale((locale) => pageTitle(page, getTexts(locale))),
-    ]),
-  );
+export function openGraphLocales(locale: Locale) {
+  return {
+    locale: OPEN_GRAPH_LOCALES[locale],
+    alternateLocale: LOCALES.filter((other) => other !== locale).map(
+      (other) => OPEN_GRAPH_LOCALES[other],
+    ),
+  };
 }

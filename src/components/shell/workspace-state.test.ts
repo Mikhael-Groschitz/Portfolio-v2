@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import type { Localized } from "@/content/locales";
 import type { ExecutionOutcome } from "@/engine/execute";
 import { NO_VISITS } from "./navigation-history";
 import { queryDocument } from "./section-routes";
@@ -34,14 +33,12 @@ const failure: ExecutionOutcome = {
   error: { number: 404, level: 16, state: 1, line: 1, message: "x" },
   hint: { kind: "help", command: "SELECT * FROM dbo.About" },
 };
-const success: Localized<ExecutionOutcome> = { "pt-BR": rows, en: rows };
 const travel: ExecutionOutcome = {
   kind: "results",
   database: "Portfolio_v1",
   results: [],
   effect: "travel",
 };
-const departure: Localized<ExecutionOutcome> = { "pt-BR": travel, en: travel };
 const moment = new Date(0);
 const first = queryDocument(1);
 const second = queryDocument(2);
@@ -65,7 +62,7 @@ describe("starting the workspace", () => {
   });
 
   it("opens the tab of a section address with results still to confirm", () => {
-    const state = initialWorkspace("career", success);
+    const state = initialWorkspace("career", rows);
     expect(state.tabs).toEqual(["career"]);
     expect(state.runs.career).toMatchObject({
       status: "done",
@@ -90,7 +87,7 @@ describe("starting the workspace", () => {
 describe("tabs", () => {
   it("opens a tab once and never duplicates it", () => {
     const state = apply(
-      initialWorkspace("about", success),
+      initialWorkspace("about", rows),
       { type: "open", document: "career", active: "about" },
       { type: "open", document: "career", active: "career" },
     );
@@ -148,7 +145,7 @@ describe("tabs", () => {
   });
 
   it("keeps the tab reached through back and forward", () => {
-    const state = apply(initialWorkspace("about", success), {
+    const state = apply(initialWorkspace("about", rows), {
       type: "open",
       document: "contact",
       active: "projects",
@@ -158,7 +155,7 @@ describe("tabs", () => {
 
   it("closes every tab with its results, the last one too", () => {
     const state = apply(
-      initialWorkspace("about", success),
+      initialWorkspace("about", rows),
       { type: "open", document: "career", active: "about" },
       { type: "close", document: "about", active: "career", next: null },
     );
@@ -200,7 +197,7 @@ describe("tabs", () => {
 describe("navigation between tabs", () => {
   it("remembers the tabs in the order they were visited", () => {
     const state = apply(
-      initialWorkspace("about", success),
+      initialWorkspace("about", rows),
       { type: "open", document: first, active: "about" },
       { type: "open", document: "career", active: first },
     );
@@ -226,7 +223,7 @@ describe("navigation between tabs", () => {
 
   it("forgets closed tabs and follows the tab shown next", () => {
     const state = apply(
-      initialWorkspace("about", success),
+      initialWorkspace("about", rows),
       { type: "open", document: "career", active: "about" },
       { type: "open", document: "contact", active: "career" },
       { type: "navigate", index: 1 },
@@ -242,7 +239,7 @@ describe("navigation between tabs", () => {
 
 describe("runs", () => {
   it("goes from executing to done", () => {
-    const started = apply(initialWorkspace("about", success), {
+    const started = apply(initialWorkspace("about", rows), {
       type: "start",
       document: "about",
       id: 1,
@@ -251,7 +248,7 @@ describe("runs", () => {
     const finished = apply(started, {
       type: "finish",
       document: "about",
-      run: userRun(1, success, moment, 150),
+      run: userRun(1, rows, moment, 150),
     });
     expect(finished.runs.about).toMatchObject({
       status: "done",
@@ -262,30 +259,28 @@ describe("runs", () => {
   });
 
   it("marks failed runs as errors", () => {
-    expect(
-      userRun(1, { "pt-BR": failure, en: failure }, moment, 1).status,
-    ).toBe("error");
+    expect(userRun(1, failure, moment, 1).status).toBe("error");
   });
 
   it("ignores a run that was replaced or closed", () => {
     const stale = apply(
-      initialWorkspace("about", success),
+      initialWorkspace("about", rows),
       { type: "start", document: "about", id: 1 },
       { type: "start", document: "about", id: 2 },
       {
         type: "finish",
         document: "about",
-        run: userRun(1, success, moment, 1),
+        run: userRun(1, rows, moment, 1),
       },
     );
     expect(stale.runs.about).toEqual({ id: 2, status: "executing" });
   });
 
   it("confirms the results of a section address when the visitor connects", () => {
-    const connected = apply(initialWorkspace("career", success), {
+    const connected = apply(initialWorkspace("career", rows), {
       type: "connect",
       document: "career",
-      run: connectionRun(success, { id: 3, completedAt: moment }),
+      run: connectionRun(rows, { id: 3, completedAt: moment }),
     });
     expect(connected.tabs).toEqual(["career"]);
     expect(connected.runs.career).toMatchObject({
@@ -301,7 +296,7 @@ describe("effects", () => {
   function finish(
     state: WorkspaceState,
     id: number,
-    outcomes: Localized<ExecutionOutcome>,
+    outcome: ExecutionOutcome,
   ) {
     return apply(
       state,
@@ -309,15 +304,15 @@ describe("effects", () => {
       {
         type: "finish",
         document: first,
-        run: userRun(id, outcomes, moment, 150),
+        run: userRun(id, outcome, moment, 150),
       },
     );
   }
 
   it("remembers the effect of the last run that asked for one", () => {
-    const traveled = finish(initialWorkspace("query", null), 4, departure);
+    const traveled = finish(initialWorkspace("query", null), 4, travel);
     expect(traveled.effect).toEqual({ id: 4, kind: "travel" });
-    expect(finish(traveled, 5, success).effect).toEqual({
+    expect(finish(traveled, 5, rows).effect).toEqual({
       id: 4,
       kind: "travel",
     });
@@ -330,18 +325,18 @@ describe("effects", () => {
       {
         type: "finish",
         document: first,
-        run: userRun(1, departure, moment, 150),
+        run: userRun(1, travel, moment, 150),
       },
     );
     expect(stale.effect).toBeNull();
   });
 
   it("keeps the effect when a connection run arrives", () => {
-    const traveled = finish(initialWorkspace("query", null), 4, departure);
+    const traveled = finish(initialWorkspace("query", null), 4, travel);
     const connected = apply(traveled, {
       type: "connect",
       document: first,
-      run: connectionRun(success, { id: 5, completedAt: moment }),
+      run: connectionRun(rows, { id: 5, completedAt: moment }),
     });
     expect(connected.effect).toEqual({ id: 4, kind: "travel" });
   });

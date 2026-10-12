@@ -4,7 +4,8 @@ import { type KeyboardEvent, type MouseEvent, useId, useRef } from "react";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { NewQueryIcon, ProcedureIcon, TableIcon } from "@/components/icons";
 import { isPlainClick } from "@/components/interaction";
-import { LocaleText } from "@/components/locale/locale-text";
+import { useLanguage } from "@/components/locale/language-context";
+import { localizedPath } from "@/components/locale/locale-routing";
 import { documentPath } from "@/components/shell/section-routes";
 import {
   FloatingResizer,
@@ -16,11 +17,6 @@ import {
   type ToolWindowText,
 } from "@/components/shell/tool-window-controls";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import {
-  DEFAULT_LOCALE,
-  type Localized,
-  mapLocalized,
-} from "@/content/locales";
 import type { CheatsheetText, SectionId } from "@/content/types";
 import { CATALOG } from "@/engine/catalog";
 import { commandFor } from "@/engine/hints";
@@ -28,8 +24,8 @@ import { CHEATSHEET_ID, CHEATSHEET_WINDOW_ID, useGuide } from "./guide-context";
 import styles from "./cheatsheet.module.css";
 
 interface CheatsheetPanelProps {
-  text: Localized<CheatsheetText>;
-  windowText: Localized<ToolWindowText>;
+  text: CheatsheetText;
+  windowText: ToolWindowText;
 }
 
 function focusFirstItem() {
@@ -56,10 +52,7 @@ export function CheatsheetPanel({
     focusInside: focusFirstItem,
   });
   const sheet = !docked;
-
-  function label(pick: (entry: CheatsheetText) => string) {
-    return <LocaleText text={mapLocalized(text, pick)} />;
-  }
+  const { locale } = useLanguage();
 
   function leaveSheet() {
     if (sheet) {
@@ -125,9 +118,7 @@ export function CheatsheetPanel({
         aria-controls={CHEATSHEET_ID}
         {...autoHide.tabProps}
       >
-        <span className={styles.edgeLabel}>
-          {label((entry) => entry.title)}
-        </span>
+        <span className={styles.edgeLabel}>{text.title}</span>
       </button>
       <div
         id={CHEATSHEET_ID}
@@ -139,7 +130,7 @@ export function CheatsheetPanel({
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
-            {label((entry) => entry.title)}
+            {text.title}
           </h2>
           <ToolWindowControls
             windowId="cheatsheet"
@@ -150,10 +141,8 @@ export function CheatsheetPanel({
           />
         </div>
         <div className={styles.body}>
-          <p className={styles.intro}>{label((entry) => entry.intro)}</p>
-          <h3 className={styles.heading}>
-            {label((entry) => entry.sectionsTitle)}
-          </h3>
+          <p className={styles.intro}>{text.intro}</p>
+          <h3 className={styles.heading}>{text.sectionsTitle}</h3>
           <ul className={styles.list}>
             <li>
               <button
@@ -166,9 +155,9 @@ export function CheatsheetPanel({
                   <NewQueryIcon />
                 </span>
                 <span className={styles.itemText}>
-                  {label((entry) => entry.newQuery.label)}
+                  {text.newQuery.label}
                   <span className={styles.itemNote}>
-                    {label((entry) => entry.newQuery.description)}
+                    {text.newQuery.description}
                   </span>
                 </span>
               </button>
@@ -176,7 +165,7 @@ export function CheatsheetPanel({
             {CATALOG.map((object) => (
               <li key={object.section}>
                 <a
-                  href={documentPath(object.section)}
+                  href={localizedPath(documentPath(object.section), locale)}
                   className={styles.item}
                   onClick={(event) => openFromList(event, object.section)}
                 >
@@ -188,7 +177,7 @@ export function CheatsheetPanel({
                     )}
                   </span>
                   <span className={styles.itemText}>
-                    {label((entry) => entry.sections[object.section])}
+                    {text.sections[object.section]}
                     <code className={styles.itemCode}>
                       {commandFor(object)}
                     </code>
@@ -197,12 +186,10 @@ export function CheatsheetPanel({
               </li>
             ))}
           </ul>
-          <h3 className={styles.heading}>
-            {label((entry) => entry.exploreTitle)}
-          </h3>
-          <p className={styles.intro}>{label((entry) => entry.exploreIntro)}</p>
+          <h3 className={styles.heading}>{text.exploreTitle}</h3>
+          <p className={styles.intro}>{text.exploreIntro}</p>
           <ul className={styles.list}>
-            {text[DEFAULT_LOCALE].examples.map(({ command }, index) => (
+            {text.examples.map(({ command }, index) => (
               <li key={command}>
                 <button
                   type="button"
@@ -214,7 +201,7 @@ export function CheatsheetPanel({
                   </span>
                   <span className={styles.itemText}>
                     <code className={styles.itemCode}>{command}</code>
-                    {label((entry) => entry.examples[index].description)}
+                    {text.examples[index].description}
                   </span>
                 </button>
               </li>
@@ -231,7 +218,7 @@ export function CheatsheetPanel({
         side="end"
         containerId={CHEATSHEET_WINDOW_ID}
         controls={CHEATSHEET_ID}
-        label={mapLocalized(text, (entry) => entry.resize)}
+        label={text.resize}
         className={styles.windowSplitter}
       />
     </div>
