@@ -7,9 +7,6 @@ import {
   createHero,
   updateHero,
 } from "../entities/hero";
-import { COLLECTOR_ROOM } from "./collector-room";
-import { LOG_CORRIDOR } from "./corridor";
-import { HALL_OF_RACKS } from "./hall";
 import {
   type Cell,
   type Level,
@@ -22,9 +19,14 @@ import {
   parseLevel,
   terrainAt,
 } from "./level";
+import {
+  COLLECTOR_ROOM,
+  HALL_OF_RACKS,
+  LOG_CORRIDOR,
+  STAIRCASE,
+  THRONE_ROOM,
+} from "./rooms";
 import { STAGE, parseStage } from "./stage";
-import { STAIRCASE } from "./staircase";
-import { THRONE_ROOM } from "./throne-room";
 
 describe("parseLevel", () => {
   it("reads terrain and markers from strings", () => {

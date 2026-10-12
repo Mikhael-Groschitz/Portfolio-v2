@@ -1,9 +1,11 @@
-import { COLLECTOR_ROOM } from "./collector-room";
-import { LOG_CORRIDOR } from "./corridor";
-import { HALL_OF_RACKS } from "./hall";
 import { type Level, joinSegments, parseLevel } from "./level";
-import { STAIRCASE } from "./staircase";
-import { THRONE_ROOM } from "./throne-room";
+import {
+  COLLECTOR_ROOM,
+  HALL_OF_RACKS,
+  LOG_CORRIDOR,
+  STAIRCASE,
+  THRONE_ROOM,
+} from "./rooms";
 
 export interface RoomPlan {
   map: readonly string[];
