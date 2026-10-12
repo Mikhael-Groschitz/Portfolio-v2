@@ -12,10 +12,7 @@ import {
 import { ProfileText } from "@/components/connect/profile-text";
 import { useEasterEggs } from "@/components/easter-eggs/easter-egg-context";
 import { TardisBadge } from "@/components/easter-eggs/tardis";
-import { LocaleText } from "@/components/locale/locale-text";
 import { formatCount, formatElapsed } from "@/content/format";
-import { type Localized, mapLocalized } from "@/content/locales";
-import { byProfile } from "@/content/profiles";
 import type { ConnectionText } from "@/content/types";
 import { DATABASE, SERVER, V1_DATABASE } from "@/engine/catalog";
 import { rowCountOf } from "@/engine/execute";
@@ -56,7 +53,7 @@ function statusOf(run: Run | null, online: boolean): StatusKey {
 }
 
 function rowsOf(run: Run | null): number {
-  return run?.status === "done" ? rowCountOf(run.outcomes["pt-BR"]) : 0;
+  return run?.status === "done" ? rowCountOf(run.outcome) : 0;
 }
 
 function elapsedOf(run: Run | null): number {
@@ -70,9 +67,7 @@ function variantOf(traveling: boolean, online: boolean): string {
   return online ? "" : styles.disconnected;
 }
 
-export function ConnectionBar({
-  text,
-}: Readonly<{ text: Localized<ConnectionText> }>) {
+export function ConnectionBar({ text }: Readonly<{ text: ConnectionText }>) {
   const { activeDocument, activeRun } = useWorkspace();
   const { traveling, boardTardis } = useEasterEggs();
   const connection = useConnectionStatus();
@@ -84,7 +79,7 @@ export function ConnectionBar({
   const status = traveling ? "traveling" : statusOf(shownRun, online);
   const rows = rowsOf(shownRun);
   const elapsed = elapsedOf(shownRun);
-  const rowsText = mapLocalized(text, (bar) => formatCount(bar.rows, rows));
+  const rowsText = formatCount(text.rows, rows);
 
   return (
     <div
@@ -94,12 +89,9 @@ export function ConnectionBar({
       <span className={styles.connectionStatus}>
         {STATUS_ICONS[status]}
         <span role="status">
-          <LocaleText text={mapLocalized(text, (bar) => bar[status])} />
+          {text[status]}
           {status === "succeeded" && (
-            <span className="visually-hidden">
-              {" "}
-              <LocaleText text={rowsText} />
-            </span>
+            <span className="visually-hidden"> {rowsText}</span>
           )}
         </span>
       </span>
@@ -107,24 +99,16 @@ export function ConnectionBar({
         {`${SERVER.name} (${SERVER.version} RTM)`}
       </span>
       <span className={`${styles.segment} ${styles.detail}`}>
-        <ProfileText
-          text={byProfile((profile) =>
-            mapLocalized(text, (bar) => bar.login[profile]),
-          )}
-        />
+        <ProfileText text={text.login} />
       </span>
       <span className={styles.segment}>
         {traveling ? V1_DATABASE : DATABASE}
       </span>
       <span className={styles.segment}>{formatElapsed(elapsed)}</span>
-      <span className={styles.segment}>
-        <LocaleText text={rowsText} />
-      </span>
+      <span className={styles.segment}>{rowsText}</span>
       <button type="button" className={styles.tardis} onClick={boardTardis}>
         <TardisBadge />
-        <span className="visually-hidden">
-          <LocaleText text={mapLocalized(text, (bar) => bar.timeTravel)} />
-        </span>
+        <span className="visually-hidden">{text.timeTravel}</span>
       </button>
     </div>
   );

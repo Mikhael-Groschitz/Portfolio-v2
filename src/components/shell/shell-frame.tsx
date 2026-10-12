@@ -18,8 +18,6 @@ import {
 import { CommandProvider } from "@/components/commands/command-context";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { useEasterEggs } from "@/components/easter-eggs/easter-egg-context";
-import { LocaleText } from "@/components/locale/locale-text";
-import { type Localized, mapLocalized } from "@/content/locales";
 import { COMPACT_MEDIA_QUERY } from "./breakpoints";
 import {
   EXPLORER_ID,
@@ -55,7 +53,7 @@ interface ShellFrameProps {
   titleBar: ReactNode;
   toolbar: ReactNode;
   explorer: ReactNode;
-  explorerLabels: Localized<ExplorerLabels>;
+  explorerLabels: ExplorerLabels;
   workspace: ReactNode;
   guide: ReactNode;
   statusBar: ReactNode;
@@ -249,9 +247,7 @@ export function ShellFrame({
               data-explorer-tab=""
               {...autoHide.tabProps}
             >
-              <LocaleText
-                text={mapLocalized(explorerLabels, (labels) => labels.title)}
-              />
+              {explorerLabels.title}
             </button>
             <div id={EXPLORER_PANEL_ID} className={styles.explorerPanel}>
               {explorer}
@@ -265,7 +261,7 @@ export function ShellFrame({
               side="start"
               containerId={EXPLORER_ID}
               controls={EXPLORER_PANEL_ID}
-              label={mapLocalized(explorerLabels, (labels) => labels.resize)}
+              label={explorerLabels.resize}
               className={styles.explorerSplitter}
             />
           </nav>

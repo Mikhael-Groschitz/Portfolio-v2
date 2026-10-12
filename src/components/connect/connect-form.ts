@@ -1,4 +1,4 @@
-import { matchLocale } from "@/components/locale/locale-runtime";
+import { matchLocale } from "@/components/locale/locale-routing";
 import type { Locale } from "@/content/locales";
 import { DEFAULT_PROFILE, type Profile } from "@/content/profiles";
 import { isHexColor, readableInk } from "@/theme/contrast";

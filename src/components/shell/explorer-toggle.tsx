@@ -1,13 +1,11 @@
 "use client";
 
 import { ExplorerIcon } from "@/components/icons";
-import { LocaleText } from "@/components/locale/locale-text";
 import styles from "@/components/toolbar/toolbar.module.css";
-import type { Localized } from "@/content/locales";
 import { EXPLORER_ID } from "./element-ids";
 import { useShell } from "./shell-frame";
 
-export function ExplorerToggle({ label }: Readonly<{ label: Localized }>) {
+export function ExplorerToggle({ label }: Readonly<{ label: string }>) {
   const { explorerOpen, openExplorer } = useShell();
 
   return (
@@ -21,9 +19,7 @@ export function ExplorerToggle({ label }: Readonly<{ label: Localized }>) {
       onClick={openExplorer}
     >
       <ExplorerIcon />
-      <span className="visually-hidden">
-        <LocaleText text={label} />
-      </span>
+      <span className="visually-hidden">{label}</span>
     </button>
   );
 }

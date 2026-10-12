@@ -7,7 +7,7 @@ import { EasterEggProvider } from "@/components/easter-eggs/easter-egg-context";
 import { GameOverlay } from "@/components/easter-eggs/game-overlay";
 import { TimeTravelOverlay } from "@/components/easter-eggs/time-travel-overlay";
 import { ObjectExplorer } from "@/components/explorer/object-explorer";
-import { localize } from "@/content";
+import { pageTexts } from "@/components/locale/page-locale";
 import { ShellFrame } from "./shell-frame";
 import { StatusBar } from "./status-bar";
 import { TitleBar } from "./title-bar";
@@ -15,7 +15,9 @@ import { Toolbar } from "./toolbar";
 import { Workspace } from "./workspace";
 import { WorkspaceProvider } from "./workspace-context";
 
-export function Shell({ children }: Readonly<{ children: ReactNode }>) {
+export async function Shell({ children }: Readonly<{ children: ReactNode }>) {
+  const { shell } = await pageTexts();
+
   return (
     <WorkspaceProvider>
       <GuideProvider>
@@ -24,40 +26,36 @@ export function Shell({ children }: Readonly<{ children: ReactNode }>) {
             titleBar={<TitleBar />}
             toolbar={<Toolbar />}
             explorer={<ObjectExplorer />}
-            explorerLabels={localize((texts) => ({
-              title: texts.shell.explorer.title,
-              resize: texts.shell.explorer.resize,
-            }))}
+            explorerLabels={{
+              title: shell.explorer.title,
+              resize: shell.explorer.resize,
+            }}
             workspace={<Workspace>{children}</Workspace>}
             guide={
               <CheatsheetPanel
-                text={localize((texts) => texts.shell.cheatsheet)}
-                windowText={localize((texts) => ({
-                  ...texts.shell.window,
-                  move: texts.shell.cheatsheet.move,
-                  close: texts.shell.cheatsheet.close,
-                }))}
+                text={shell.cheatsheet}
+                windowText={{
+                  ...shell.window,
+                  move: shell.cheatsheet.move,
+                  close: shell.cheatsheet.close,
+                }}
               />
             }
-            statusBar={
-              <StatusBar text={localize((texts) => texts.shell.status)} />
-            }
-            tour={<Tour text={localize((texts) => texts.shell.tour)} />}
+            statusBar={<StatusBar text={shell.status} />}
+            tour={<Tour text={shell.tour} />}
             dialog={
               <ConnectDialog
-                text={localize((texts) => texts.shell.connect)}
-                login={localize((texts) => texts.shell.connection.login)}
+                text={shell.connect}
+                login={shell.connection.login}
               />
             }
             easterEggs={
               <>
                 <TimeTravelOverlay
-                  text={localize((texts) => texts.shell.connection.traveling)}
-                  arrivalText={localize(
-                    (texts) => texts.shell.results.returned,
-                  )}
+                  text={shell.connection.traveling}
+                  arrivalText={shell.results.returned}
                 />
-                <GameOverlay text={localize((texts) => texts.shell.game)} />
+                <GameOverlay text={shell.game} />
               </>
             }
           />

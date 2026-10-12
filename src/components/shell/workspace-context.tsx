@@ -23,8 +23,10 @@ import {
   createQueryStore,
   queryToRun,
 } from "@/components/editor/query-store";
+import { useLanguage } from "@/components/locale/language-context";
+import { localizedPath } from "@/components/locale/locale-routing";
 import { getTexts } from "@/content";
-import { type Localized, byLocale } from "@/content/locales";
+import type { Locale } from "@/content/locales";
 import { SECTION_IDS, type SectionId } from "@/content/types";
 import { DATABASE } from "@/engine/catalog";
 import { arrivalOutcome } from "@/engine/easter-eggs";
@@ -92,10 +94,19 @@ interface WorkspaceContextValue {
 
 const WorkspaceContext = createContext<WorkspaceContextValue | null>(null);
 
-function startWorkspace(segment: string | null) {
+function startWorkspace({
+  segment,
+  locale,
+}: {
+  segment: string | null;
+  locale: Locale;
+}) {
   const route = routeFromSegment(segment);
   const section = route === null || route === QUERY_ROUTE ? null : route;
-  return initialWorkspace(route, section ? executeSection(section) : null);
+  return initialWorkspace(
+    route,
+    section ? executeSection(section, locale) : null,
+  );
 }
 
 function isNewQueryShortcut(event: KeyboardEvent): boolean {
@@ -112,8 +123,8 @@ function pathOf(document: DocumentId | null): string {
   return document === null ? HOME_PATH : documentPath(document);
 }
 
-function canceledOutcome(): Localized<ExecutionOutcome> {
-  return byLocale((locale) => ({
+function canceledOutcome(locale: Locale): ExecutionOutcome {
+  return {
     kind: "results",
     database: DATABASE,
     results: [
@@ -123,17 +134,18 @@ function canceledOutcome(): Localized<ExecutionOutcome> {
         statement: 0,
       },
     ],
-  }));
+  };
 }
 
 export function WorkspaceProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
+  const { locale } = useLanguage();
   const segment = useSelectedLayoutSegment();
   const [state, dispatch] = useReducer(
     workspaceReducer,
-    segment,
+    { segment, locale },
     startWorkspace,
   );
   const activeDocument = activeDocumentOf(state, routeFromSegment(segment));
@@ -147,8 +159,8 @@ export function WorkspaceProvider({
     if (activeDocument === null || isQueryDocument(activeDocument)) {
       return null;
     }
-    return connectionRun(executeSection(activeDocument));
-  }, [storedRun, activeDocument]);
+    return connectionRun(executeSection(activeDocument, locale));
+  }, [storedRun, activeDocument, locale]);
   const stores = useRef(new Map<QueryDocumentId, QueryStore>());
   const runIds = useRef(0);
   const timers = useRef(new Map<number, number>());
@@ -156,11 +168,16 @@ export function WorkspaceProvider({
   const intent = useRef<ConnectionIntent | null>(null);
   const returnStatus = useRef<SettledStatus | null>(null);
 
+  const hrefOf = useCallback(
+    (document: DocumentId | null) => localizedPath(pathOf(document), locale),
+    [locale],
+  );
+
   useEffect(() => {
     for (const section of SECTION_IDS) {
-      router.prefetch(documentPath(section));
+      router.prefetch(hrefOf(section));
     }
-  }, [router]);
+  }, [router, hrefOf]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -182,7 +199,7 @@ export function WorkspaceProvider({
   }, []);
 
   const startRun = useCallback(
-    (document: DocumentId, outcomes: () => Localized<ExecutionOutcome>) => {
+    (document: DocumentId, outcome: () => ExecutionOutcome) => {
       runIds.current += 1;
       const id = runIds.current;
       const startedAt = performance.now();
@@ -195,7 +212,7 @@ export function WorkspaceProvider({
           document,
           run: userRun(
             id,
-            outcomes(),
+            outcome(),
             new Date(),
             performance.now() - startedAt,
           ),
@@ -209,7 +226,6 @@ export function WorkspaceProvider({
 
   const runDocument = useCallback(
     (document: DocumentId, given?: string) => {
-      const seed = Math.random();
       const input =
         given ??
         (isQueryDocument(document)
@@ -217,22 +233,21 @@ export function WorkspaceProvider({
           : null);
       startRun(document, () =>
         input !== null || isQueryDocument(document)
-          ? executeQuery(input ?? "", seed)
-          : executeSection(document),
+          ? executeQuery(input ?? "", locale)
+          : executeSection(document, locale),
       );
     },
-    [queryStore, startRun],
+    [queryStore, startRun, locale],
   );
 
   const parseDocument = useCallback(
     (document: DocumentId) => {
-      const seed = Math.random();
       const input = isQueryDocument(document)
         ? queryToRun(queryStore(document).getSnapshot())
-        : sectionText(document);
-      startRun(document, () => parseQuery(input, seed));
+        : sectionText(document, locale);
+      startRun(document, () => parseQuery(input, locale));
     },
-    [queryStore, startRun],
+    [queryStore, startRun, locale],
   );
 
   const cancelRun = useCallback(
@@ -249,13 +264,13 @@ export function WorkspaceProvider({
         id: run.id,
         status: "canceled",
         origin: "user",
-        outcomes: canceledOutcome(),
+        outcome: canceledOutcome(locale),
         completedAt: new Date(),
         elapsedMs: performance.now() - startedAt,
       };
       dispatch({ type: "finish", document, run: canceled });
     },
-    [state.runs],
+    [state.runs, locale],
   );
 
   const activateDocument = useCallback(
@@ -263,11 +278,11 @@ export function WorkspaceProvider({
       startTransition(() => {
         dispatch({ type: "open", document, active: activeDocument });
         if (pathOf(document) !== pathOf(activeDocument)) {
-          router.push(documentPath(document), { scroll: false });
+          router.push(hrefOf(document), { scroll: false });
         }
       });
     },
-    [activeDocument, router],
+    [activeDocument, router, hrefOf],
   );
 
   const openSection = useCallback(
@@ -329,11 +344,11 @@ export function WorkspaceProvider({
       startTransition(() => {
         dispatch({ type: "navigate", index });
         if (pathOf(target) !== pathOf(activeDocument)) {
-          router.push(documentPath(target), { scroll: false });
+          router.push(hrefOf(target), { scroll: false });
         }
       });
     },
-    [activeDocument, router, state.visits],
+    [activeDocument, router, state.visits, hrefOf],
   );
 
   const closeDocument = useCallback(
@@ -345,11 +360,11 @@ export function WorkspaceProvider({
       startTransition(() => {
         dispatch({ type: "close", document, active: activeDocument, next });
         if (document === activeDocument && pathOf(next) !== pathOf(document)) {
-          router.replace(pathOf(next), { scroll: false });
+          router.replace(hrefOf(next), { scroll: false });
         }
       });
     },
-    [activeDocument, router, tabs],
+    [activeDocument, router, tabs, hrefOf],
   );
 
   const closeAllDocuments = useCallback(() => {
@@ -357,10 +372,10 @@ export function WorkspaceProvider({
     startTransition(() => {
       dispatch({ type: "closeAll" });
       if (activeDocument !== null) {
-        router.replace(HOME_PATH, { scroll: false });
+        router.replace(hrefOf(null), { scroll: false });
       }
     });
-  }, [activeDocument, router]);
+  }, [activeDocument, router, hrefOf]);
 
   const requestConnection = useCallback((next?: ConnectionIntent) => {
     const status = readConnectionStatus();
@@ -386,7 +401,7 @@ export function WorkspaceProvider({
       dispatch({
         type: "connect",
         document: activeDocument,
-        run: connectionRun(executeSection(activeDocument), {
+        run: connectionRun(executeSection(activeDocument, locale), {
           id: runIds.current,
           completedAt: new Date(),
         }),
@@ -401,7 +416,7 @@ export function WorkspaceProvider({
         openQuery();
       }
     }
-  }, [activeDocument, activeRun, openQuery, openSection, writeQuery]);
+  }, [activeDocument, activeRun, openQuery, openSection, writeQuery, locale]);
 
   const cancelConnection = useCallback(() => {
     const back = returnStatus.current ?? "disconnected";
@@ -427,10 +442,10 @@ export function WorkspaceProvider({
     dispatch({
       type: "connect",
       document,
-      run: connectionRun(
-        byLocale(() => arrivalOutcome()),
-        { id: runIds.current, completedAt: new Date() },
-      ),
+      run: connectionRun(arrivalOutcome(), {
+        id: runIds.current,
+        completedAt: new Date(),
+      }),
     });
     if (document !== activeDocument) {
       activateDocument(document);

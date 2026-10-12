@@ -1,13 +1,11 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
-import { useLanguage } from "@/components/locale/language-context";
 import { COMPACT_MEDIA_QUERY } from "@/components/shell/breakpoints";
 import { type WindowState, windowState } from "@/components/shell/layout-model";
 import { useShell } from "@/components/shell/shell-frame";
 import { useLayout } from "@/components/shell/use-layout";
 import { useMediaQuery } from "@/components/shell/use-media-query";
-import type { Localized } from "@/content/locales";
 import type { TourStepId, TourText } from "@/content/types";
 import { CHEATSHEET_ID, TOUR_STEPS, useGuide } from "./guide-context";
 import { type CardPosition, type Placement, placeCard } from "./tour-placement";
@@ -181,10 +179,9 @@ function TourCard({
   );
 }
 
-export function Tour({ text }: Readonly<{ text: Localized<TourText> }>) {
+export function Tour({ text }: Readonly<{ text: TourText }>) {
   const { tourIndex, docked } = useGuide();
   const cheatsheet = windowState(useLayout().cheatsheet);
-  const { locale } = useLanguage();
   const { explorerOpen } = useShell();
   const compact = useMediaQuery(COMPACT_MEDIA_QUERY);
 
@@ -198,7 +195,7 @@ export function Tour({ text }: Readonly<{ text: Localized<TourText> }>) {
       key={step}
       step={step}
       index={tourIndex}
-      text={text[locale]}
+      text={text}
       surroundings={{ compact, explorerOpen, docked, cheatsheet }}
     />
   );

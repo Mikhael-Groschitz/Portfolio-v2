@@ -5,7 +5,7 @@ import {
 } from "@/components/browser-storage";
 
 export type SessionFlag =
-  "tour-seen" | "workspace-started" | "cheatsheet-placed";
+  "tour-due" | "tour-seen" | "workspace-started" | "cheatsheet-placed";
 
 const remembered = new Set<SessionFlag>();
 const listeners = new Set<() => void>();

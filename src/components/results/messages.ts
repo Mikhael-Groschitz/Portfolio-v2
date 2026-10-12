@@ -19,6 +19,8 @@ export interface RunTiming {
 
 type ErrorOutcome = Extract<ExecutionOutcome, { kind: "error" }>;
 
+type SqlError = ErrorOutcome["error"];
+
 type ResultsOutcome = Extract<ExecutionOutcome, { kind: "results" }>;
 
 interface Section {
@@ -26,8 +28,10 @@ interface Section {
   weight: number;
 }
 
-function errorLines({ error }: ErrorOutcome, text: ResultsText): string {
-  const { number, level, state, line, message } = error;
+export function errorLines(
+  { number, level, state, line, message }: SqlError,
+  text: ResultsText,
+): string {
   const header = text.errorHeader
     .replace("{number}", String(number))
     .replace("{level}", String(level))
@@ -135,7 +139,7 @@ export function messageBlocks(
       : "";
     return [
       {
-        error: errorLines(outcome, text),
+        error: errorLines(outcome.error, text),
         text: `\n\n${hintLine(outcome.hint, text)}${completion}`,
       },
     ];

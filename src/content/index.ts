@@ -1,10 +1,5 @@
 import { texts } from "./globals";
-import {
-  DEFAULT_LOCALE,
-  type Locale,
-  type Localized,
-  mapLocalized,
-} from "./locales";
+import { DEFAULT_LOCALE, type Locale } from "./locales";
 import type { SectionId, Tables, Texts } from "./types";
 
 const readers: {
@@ -24,10 +19,6 @@ const readers: {
 
 export function getTexts(locale: Locale = DEFAULT_LOCALE): Texts {
   return texts[locale];
-}
-
-export function localize<T>(pick: (localeTexts: Texts) => T): Localized<T> {
-  return mapLocalized(texts, pick);
 }
 
 export function getTable<K extends SectionId>(

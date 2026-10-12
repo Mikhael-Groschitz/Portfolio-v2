@@ -3,12 +3,10 @@
 import { useRef } from "react";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { CaretDownIcon, DisconnectIcon } from "@/components/icons";
-import { LocaleText } from "@/components/locale/locale-text";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import type { Localized } from "@/content/locales";
 import styles from "./object-explorer.module.css";
 
-export function ConnectButton({ label }: Readonly<{ label: Localized }>) {
+export function ConnectButton({ label }: Readonly<{ label: string }>) {
   const { requestConnection } = useWorkspace();
 
   return (
@@ -19,13 +17,13 @@ export function ConnectButton({ label }: Readonly<{ label: Localized }>) {
       data-tip=""
       onClick={() => requestConnection()}
     >
-      <LocaleText text={label} />
+      {label}
       <CaretDownIcon />
     </button>
   );
 }
 
-export function DisconnectButton({ label }: Readonly<{ label: Localized }>) {
+export function DisconnectButton({ label }: Readonly<{ label: string }>) {
   const { disconnect } = useWorkspace();
   const connected = useConnectionStatus() === "connected";
   const buttonRef = useRef<HTMLButtonElement>(null);
@@ -48,9 +46,7 @@ export function DisconnectButton({ label }: Readonly<{ label: Localized }>) {
       onClick={handleClick}
     >
       <DisconnectIcon />
-      <span className="visually-hidden">
-        <LocaleText text={label} />
-      </span>
+      <span className="visually-hidden">{label}</span>
     </button>
   );
 }

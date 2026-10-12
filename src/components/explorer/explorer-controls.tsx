@@ -6,11 +6,8 @@ import {
   ToolWindowControls,
   type ToolWindowText,
 } from "@/components/shell/tool-window-controls";
-import type { Localized } from "@/content/locales";
 
-export function ExplorerControls({
-  text,
-}: Readonly<{ text: Localized<ToolWindowText> }>) {
+export function ExplorerControls({ text }: Readonly<{ text: ToolWindowText }>) {
   const { hideExplorer } = useShell();
 
   return (

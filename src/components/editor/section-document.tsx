@@ -1,4 +1,4 @@
-import { LocaleBlocks } from "@/components/locale/locale-text";
+import { pageLocale } from "@/components/locale/page-locale";
 import { documentTabId } from "@/components/shell/element-ids";
 import type { SectionId } from "@/content/types";
 import type { CodeToken } from "./highlight";
@@ -48,12 +48,13 @@ function ScriptView({
   );
 }
 
-export function SectionDocument({ section }: Readonly<{ section: SectionId }>) {
+export async function SectionDocument({
+  section,
+}: Readonly<{ section: SectionId }>) {
+  const locale = await pageLocale();
   return (
-    <LocaleBlocks>
-      {(locale) => (
-        <ScriptView section={section} lines={scriptLines(section, locale)} />
-      )}
-    </LocaleBlocks>
+    <div className={styles.scriptArea}>
+      <ScriptView section={section} lines={scriptLines(section, locale)} />
+    </div>
   );
 }

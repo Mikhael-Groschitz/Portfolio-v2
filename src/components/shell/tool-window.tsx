@@ -8,8 +8,6 @@ import {
   useEffect,
   useRef,
 } from "react";
-import { useLanguage } from "@/components/locale/language-context";
-import type { Localized } from "@/content/locales";
 import {
   type ToolWindowId,
   WIDTH_STEPS,
@@ -32,7 +30,7 @@ interface WindowSplitterProps {
   side: "start" | "end";
   containerId: string;
   controls: string;
-  label: Localized;
+  label: string;
   className?: string;
 }
 
@@ -45,7 +43,6 @@ export function WindowSplitter({
   className,
 }: Readonly<WindowSplitterProps>) {
   const { width, collapsed } = useLayout()[windowId];
-  const { locale } = useLanguage();
   const limits = WINDOW_WIDTHS[windowId];
   const growKey = side === "start" ? "ArrowRight" : "ArrowLeft";
   const shrinkKey = side === "start" ? "ArrowLeft" : "ArrowRight";
@@ -77,7 +74,7 @@ export function WindowSplitter({
     <Splitter
       orientation="vertical"
       keys={{ decrease: shrinkKey, increase: growKey }}
-      label={label[locale]}
+      label={label}
       controls={controls}
       value={collapsed ? limits.min : width}
       min={limits.min}

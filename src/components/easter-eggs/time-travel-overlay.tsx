@@ -1,8 +1,6 @@
 "use client";
 
 import { type AnimationEvent, useEffect } from "react";
-import { LocaleText } from "@/components/locale/locale-text";
-import type { Localized } from "@/content/locales";
 import { useEasterEggs } from "./easter-egg-context";
 import { endLanding, useLanding } from "./landing-store";
 import { Tardis } from "./tardis";
@@ -11,11 +9,11 @@ import styles from "./easter-eggs.module.css";
 const LANDING_LIMIT_MS = 4000;
 
 interface TimeTravelOverlayProps {
-  text: Localized;
-  arrivalText: Localized;
+  text: string;
+  arrivalText: string;
 }
 
-function Landing({ text }: Readonly<{ text: Localized }>) {
+function Landing({ text }: Readonly<{ text: string }>) {
   useEffect(() => {
     const timer = window.setTimeout(endLanding, LANDING_LIMIT_MS);
     return () => window.clearTimeout(timer);
@@ -37,9 +35,7 @@ function Landing({ text }: Readonly<{ text: Localized }>) {
       <div className={styles.cabin}>
         <Tardis size={176} phase="arrive" />
       </div>
-      <p className={styles.caption}>
-        <LocaleText text={text} />
-      </p>
+      <p className={styles.caption}>{text}</p>
     </div>
   );
 }
@@ -56,9 +52,7 @@ export function TimeTravelOverlay({
         <div className={styles.cabin}>
           <Tardis size={176} phase="depart" />
         </div>
-        <p className={styles.caption}>
-          <LocaleText text={text} />
-        </p>
+        <p className={styles.caption}>{text}</p>
       </div>
     );
   }

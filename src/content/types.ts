@@ -64,6 +64,7 @@ interface ResumeRow {
 
 interface SeoText {
   description: string;
+  keywords: string[];
   sections: Record<SectionId, string>;
   imageAlt: string;
 }
@@ -450,6 +451,10 @@ export interface ShellText {
   workspace: {
     start: string;
     noScript: string;
+  };
+  notFound: {
+    title: string;
+    back: string;
   };
   scripts: Record<SectionId, string[]>;
   results: ResultsText;

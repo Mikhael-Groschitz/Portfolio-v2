@@ -1,17 +1,29 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import { ImageResponse } from "next/og";
+import { imageAlt } from "@/app/site-metadata";
 import { getTexts } from "@/content";
-import { DEFAULT_LOCALE } from "@/content/locales";
+import { DEFAULT_LOCALE, isLocale } from "@/content/locales";
 import { DATABASE, SERVER } from "@/engine/catalog";
 import { type TokenName, parseTokens } from "@/theme/tokens";
-import { imageAlt } from "./site-metadata";
 
-const texts = getTexts(DEFAULT_LOCALE);
+interface ImageProps {
+  params: Promise<{ lang: string }>;
+}
 
-export const alt = imageAlt(texts);
-export const size = { width: 1200, height: 630 };
-export const contentType = "image/png";
+const size = { width: 1200, height: 630 };
+const contentType = "image/png";
+
+async function textsOf(params: ImageProps["params"]) {
+  const { lang } = await params;
+  return getTexts(isLocale(lang) ? lang : DEFAULT_LOCALE);
+}
+
+export async function generateImageMetadata({ params }: ImageProps) {
+  return [
+    { id: "card", alt: imageAlt(await textsOf(params)), size, contentType },
+  ];
+}
 
 const tokens = parseTokens(
   readFileSync(path.join(process.cwd(), "src/theme/tokens.css"), "utf8"),
@@ -29,8 +41,8 @@ function color(token: TokenName): string {
   return tokens.get(token) ?? "";
 }
 
-export default function OpenGraphImage() {
-  const { about, shell } = texts;
+export default async function OpenGraphImage({ params }: ImageProps) {
+  const { about, shell } = await textsOf(params);
 
   return new ImageResponse(
     <div

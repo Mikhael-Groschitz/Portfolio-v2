@@ -3,9 +3,6 @@
 import type { ReactNode } from "react";
 import { useCommands } from "@/components/commands/command-context";
 import { COMMANDS, commandLabel } from "@/components/commands/command-model";
-import { LocaleText } from "@/components/locale/locale-text";
-import { getTexts } from "@/content";
-import { byLocale } from "@/content/locales";
 import type { CommandId } from "@/content/types";
 import styles from "./toolbar.module.css";
 
@@ -62,13 +59,7 @@ export function CommandButton({
     >
       {icon}
       {labelMode !== "aria" && (
-        <span className={LABEL_CLASSES[labelMode]}>
-          <LocaleText
-            text={byLocale((locale) =>
-              commandLabel(getTexts(locale).shell.commands[command]),
-            )}
-          />
-        </span>
+        <span className={LABEL_CLASSES[labelMode]}>{label}</span>
       )}
     </button>
   );

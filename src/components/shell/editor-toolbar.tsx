@@ -27,7 +27,6 @@ import {
   UncommentIcon,
 } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import type { PopupMenuItem } from "@/components/menu/menu-button";
 import { CommandButton } from "@/components/toolbar/command-button";
 import { commandMenuItem } from "@/components/toolbar/command-menu-item";
@@ -37,7 +36,6 @@ import {
 } from "@/components/toolbar/toolbar-strip";
 import styles from "@/components/toolbar/toolbar.module.css";
 import { getTexts } from "@/content";
-import { byLocale } from "@/content/locales";
 import type { CommandId } from "@/content/types";
 import { DATABASE, V1_DATABASE } from "@/engine/catalog";
 import { DatabaseSelect } from "./database-select";
@@ -83,13 +81,7 @@ export function EditorToolbar() {
       key: "database",
       render: () => (
         <label className={styles.database}>
-          <span className="visually-hidden">
-            <LocaleText
-              text={byLocale(
-                (current) => getTexts(current).shell.toolbar.databases,
-              )}
-            />
-          </span>
+          <span className="visually-hidden">{texts.toolbar.databases}</span>
           <DatabaseSelect />
         </label>
       ),
@@ -136,11 +128,7 @@ export function EditorToolbar() {
   return (
     <ToolbarStrip
       label={texts.toolbar.sqlEditor}
-      moreLabel={
-        <LocaleText
-          text={byLocale((current) => getTexts(current).shell.toolbar.more)}
-        />
-      }
+      moreLabel={texts.toolbar.more}
       entries={entries}
       trailing={() => [item("customizeToolbar")]}
       collapse

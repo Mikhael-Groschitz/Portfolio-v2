@@ -19,14 +19,12 @@ import {
 } from "@/components/icons";
 import { isPlainClick } from "@/components/interaction";
 import { ProfileText } from "@/components/connect/profile-text";
-import { LocaleText } from "@/components/locale/locale-text";
 import {
   type TreeIcon,
   type TreeLabel,
   type TreeNode,
   expandableIds,
   isExpandable,
-  isProfileLabel,
   moveForKey,
   visibleNodes,
 } from "./tree-model";
@@ -43,14 +41,7 @@ const NODE_ICONS: Record<TreeIcon, ReactNode> = {
 };
 
 function NodeLabel({ label }: Readonly<{ label: TreeLabel }>) {
-  if (typeof label === "string") {
-    return label;
-  }
-  return isProfileLabel(label) ? (
-    <ProfileText text={label} />
-  ) : (
-    <LocaleText text={label} />
-  );
+  return typeof label === "string" ? label : <ProfileText text={label} />;
 }
 
 interface ExplorerTreeProps {

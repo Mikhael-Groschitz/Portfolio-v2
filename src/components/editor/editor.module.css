@@ -117,16 +117,14 @@
   min-height: 0;
 }
 
-.panel > [data-locale-block] {
+.panel > .scriptArea {
   display: flex;
   flex: var(--editor-grow, 45) 1 0;
   min-width: 0;
   min-height: 0;
 }
 
-:global(html[data-results="maximized"])
-  .panel[data-has-results]
-  > [data-locale-block],
+:global(html[data-results="maximized"]) .panel[data-has-results] > .scriptArea,
 :global(html[data-results="maximized"]) .panel[data-has-results] > .editorBar {
   display: none;
 }
@@ -223,17 +221,17 @@
 }
 
 @media (max-width: 767px) {
-  .panel > [data-locale-block],
+  .panel > .scriptArea,
   :global(html[data-results="maximized"])
     .panel[data-has-results]
-    > [data-locale-block],
+    > .scriptArea,
   :global(html[data-results="maximized"])
     .panel[data-has-results]
     > .editorBar {
     display: flex;
   }
 
-  .panel > [data-locale-block] {
+  .panel > .scriptArea {
     flex: none;
   }
 

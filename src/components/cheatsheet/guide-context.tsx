@@ -103,11 +103,11 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
   const connected = useConnectionStatus() === "connected";
   const { activeDocument } = useWorkspace();
   const started = useSessionFlag("workspace-started", true);
+  const tourDue = useSessionFlag("tour-due", false);
   const [sheetRequested, setSheetRequested] = useState(false);
   const [tourIndex, setTourIndex] = useState<number | null>(null);
   const sheetReturnFocus = useRef<HTMLElement | null>(null);
   const tourReturnFocus = useRef<HTMLElement | null>(null);
-  const timers = useRef(new Set<number>());
   const sheetOpen = !docked && sheetRequested;
 
   useEffect(() => {
@@ -115,15 +115,6 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
       setFlag("workspace-started");
     }
   }, [activeDocument]);
-
-  useEffect(() => {
-    const pending = timers.current;
-    return () => {
-      for (const timer of pending) {
-        window.clearTimeout(timer);
-      }
-    };
-  }, []);
 
   const chooseCheatsheet = useCallback(() => {
     setFlag("cheatsheet-placed");
@@ -156,10 +147,19 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
 
   const startTour = useCallback(() => {
     setFlag("tour-seen");
+    clearFlag("tour-due");
     setSheetRequested(false);
     tourReturnFocus.current = activeElement();
     setTourIndex(0);
   }, []);
+
+  useEffect(() => {
+    if (!connected || !tourDue) {
+      return;
+    }
+    const timer = window.setTimeout(() => startTour(), TOUR_DELAY_MS);
+    return () => window.clearTimeout(timer);
+  }, [connected, tourDue, startTour]);
 
   const finishTour = useCallback(() => {
     setTourIndex(null);
@@ -191,22 +191,14 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
     );
   }, []);
 
-  const afterConnect = useCallback(
-    (profile: Profile) => {
-      if (!readFlag("cheatsheet-placed")) {
-        placeByProfile(profile);
-      }
-      if (profile !== "visitor" || readFlag("tour-seen")) {
-        return;
-      }
-      const timer = window.setTimeout(() => {
-        timers.current.delete(timer);
-        startTour();
-      }, TOUR_DELAY_MS);
-      timers.current.add(timer);
-    },
-    [startTour],
-  );
+  const afterConnect = useCallback((profile: Profile) => {
+    if (!readFlag("cheatsheet-placed")) {
+      placeByProfile(profile);
+    }
+    if (profile === "visitor" && !readFlag("tour-seen")) {
+      setFlag("tour-due");
+    }
+  }, []);
 
   const resetCheatsheet = useCallback(() => {
     clearFlag("cheatsheet-placed");

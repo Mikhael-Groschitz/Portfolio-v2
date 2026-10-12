@@ -96,7 +96,7 @@
   outline-offset: -2px;
 }
 
-.view > [data-locale-block] {
+.view > .outcome {
   animation: appear 150ms ease-out;
 }
 
@@ -114,7 +114,7 @@
   display: none;
 }
 
-.resultsView > [data-locale-block] {
+.resultsView > .outcome {
   display: flex;
   flex: 1 1 0;
   flex-direction: column;
@@ -232,7 +232,7 @@
   }
 }
 
-:global(html[data-motion="reduce"]) .view > [data-locale-block] {
+:global(html[data-motion="reduce"]) .view > .outcome {
   animation: none;
 }
 
@@ -259,7 +259,7 @@
   }
 
   .resultsView,
-  .resultsView > [data-locale-block] {
+  .resultsView > .outcome {
     display: block;
     overflow: visible;
   }

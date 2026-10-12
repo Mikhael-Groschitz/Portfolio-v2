@@ -10,7 +10,6 @@ import {
   StopIcon,
 } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { LocaleText } from "@/components/locale/locale-text";
 import { CommandButton } from "@/components/toolbar/command-button";
 import { commandMenuItem } from "@/components/toolbar/command-menu-item";
 import {
@@ -18,14 +17,13 @@ import {
   ToolbarStrip,
 } from "@/components/toolbar/toolbar-strip";
 import { getTexts } from "@/content";
-import { type Localized, byLocale } from "@/content/locales";
 import type { CommandId } from "@/content/types";
 import { ConnectButton, DisconnectButton } from "./explorer-connection";
 import styles from "./object-explorer.module.css";
 
 interface ExplorerToolbarProps {
-  connectLabel: Localized;
-  disconnectLabel: Localized;
+  connectLabel: string;
+  disconnectLabel: string;
 }
 
 export function ExplorerToolbar({
@@ -71,11 +69,7 @@ export function ExplorerToolbar({
   return (
     <ToolbarStrip
       label={getTexts(locale).shell.toolbar.explorer}
-      moreLabel={
-        <LocaleText
-          text={byLocale((current) => getTexts(current).shell.toolbar.more)}
-        />
-      }
+      moreLabel={getTexts(locale).shell.toolbar.more}
       entries={entries}
       variant="panel"
     />

@@ -1,7 +1,10 @@
 import { readFileSync } from "node:fs";
 import path from "node:path";
 import type { Metadata } from "next";
+import { notFound } from "next/navigation";
 import { highlightTsql } from "@/components/editor/highlight";
+import { pageLocale } from "@/components/locale/page-locale";
+import { DEFAULT_LOCALE } from "@/content/locales";
 import { catalogIdentifiers } from "@/engine/catalog";
 import { contrastRatio } from "@/theme/contrast";
 import {
@@ -57,7 +60,11 @@ function hexOf(name: string): string {
   return tokenValues.get(name) ?? "";
 }
 
-export default function PalettePage() {
+export default async function PalettePage() {
+  if ((await pageLocale()) !== DEFAULT_LOCALE) {
+    notFound();
+  }
+
   return (
     <main className={styles.page}>
       <h1>Paleta de cores</h1>
