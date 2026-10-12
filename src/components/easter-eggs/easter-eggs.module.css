@@ -15,14 +15,16 @@
   );
   color: var(--text);
   text-align: center;
-  animation: vortex 1.8s ease-in both;
+  animation: vortex 0.4s ease-out both;
+}
+
+.landing {
+  animation: land 2.4s ease-in both;
 }
 
 .cabin {
   position: relative;
   display: flex;
-  color: var(--status-time-travel);
-  animation: materialize 1.8s ease-in-out both;
 }
 
 .cabin::before {
@@ -36,8 +38,7 @@
   );
 }
 
-.cabin > svg {
-  position: relative;
+.cabin > span {
   filter: drop-shadow(
     0 0 24px color-mix(in srgb, var(--text-on-time-travel) 30%, transparent)
   );
@@ -54,29 +55,16 @@
   }
 }
 
-@keyframes materialize {
-  0% {
-    opacity: 0;
-  }
-
-  20% {
-    opacity: 0.6;
-  }
-
-  35% {
-    opacity: 0.15;
-  }
-
-  55% {
-    opacity: 0.85;
-  }
-
-  70% {
-    opacity: 0.35;
+@keyframes land {
+  0%,
+  75% {
+    opacity: 1;
+    visibility: visible;
   }
 
   100% {
-    opacity: 1;
+    opacity: 0;
+    visibility: hidden;
   }
 }
 
@@ -116,9 +104,10 @@
   font: inherit;
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .overlay,
-  .cabin {
-    animation: none;
-  }
+:global(html[data-motion="reduce"]) .overlay {
+  animation: none;
+}
+
+:global(html[data-motion="reduce"]) .landing {
+  display: none;
 }

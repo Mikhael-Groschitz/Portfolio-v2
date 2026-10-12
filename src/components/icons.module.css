@@ -10,6 +10,20 @@
   stroke: none;
 }
 
+.accent {
+  stroke: var(--icon-accent, currentColor);
+}
+
+.cut {
+  stroke: var(--icon-cut, var(--bg-window));
+}
+
+.bold {
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
 .app {
   stroke-width: 2;
   stroke-linecap: round;
@@ -105,8 +119,6 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .spinner {
-    animation: none;
-  }
+:global(html[data-motion="reduce"]) .spinner {
+  animation: none;
 }

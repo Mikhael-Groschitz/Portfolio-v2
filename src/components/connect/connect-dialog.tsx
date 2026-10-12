@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import {
   type KeyboardEvent,
   type SubmitEvent,
@@ -33,6 +32,7 @@ import {
   readStatusColor,
   storeConnection,
 } from "./connection-runtime";
+import { markConnecting } from "./connecting-store";
 import { HelpPopover } from "./help-popover";
 import { LoginFields } from "./login-fields";
 import { ParametersField } from "./parameters-field";
@@ -41,7 +41,7 @@ import styles from "./connect-dialog.module.css";
 
 const CONNECT_DELAY_MS = 600;
 
-const SIMPLE_PATH = "/simple";
+const FALLBACK_FOCUS = '[data-tour="new-query"]';
 
 const FOCUSABLE =
   'a[href], button:not(:disabled), input:not(:disabled), select:not(:disabled), textarea:not(:disabled), [tabindex]:not([tabindex="-1"])';
@@ -69,9 +69,19 @@ interface ConnectDialogProps {
   login: Localized<ByProfile<string>>;
 }
 
+function focusedElement(): HTMLElement | null {
+  if (typeof document === "undefined") {
+    return null;
+  }
+  const element = document.activeElement;
+  return element instanceof HTMLElement && element !== document.body
+    ? element
+    : null;
+}
+
 export function ConnectDialog(props: Readonly<ConnectDialogProps>) {
   const status = useConnectionStatus();
-  if (status === "connected") {
+  if (status === "connected" || status === "disconnected") {
     return null;
   }
   return <ConnectWindow {...props} interactive={status === "pending"} />;
@@ -86,9 +96,8 @@ function ConnectWindow({
   login,
   interactive,
 }: Readonly<ConnectWindowProps>) {
-  const router = useRouter();
   const { locale, setLocale } = useLanguage();
-  const { connect } = useWorkspace();
+  const { connect, cancelConnection } = useWorkspace();
   const { afterConnect } = useGuide();
   const compact = useMediaQuery(COMPACT_MEDIA_QUERY);
   const titleId = useId();
@@ -101,6 +110,7 @@ function ConnectWindow({
   const dialogRef = useRef<HTMLDivElement>(null);
   const connectRef = useRef<HTMLButtonElement>(null);
   const helpButtonRef = useRef<HTMLButtonElement>(null);
+  const [opener] = useState(focusedElement);
   const timers = useRef(new Set<number>());
 
   useEffect(() => {
@@ -112,6 +122,7 @@ function ConnectWindow({
   useEffect(() => {
     const pending = timers.current;
     return () => {
+      markConnecting(false);
       for (const timer of pending) {
         window.clearTimeout(timer);
       }
@@ -122,7 +133,13 @@ function ConnectWindow({
   const current = text[locale];
 
   function cancel() {
-    router.push(SIMPLE_PATH);
+    cancelConnection();
+    requestAnimationFrame(() => {
+      const target = opener?.isConnected
+        ? opener
+        : document.querySelector<HTMLElement>(FALLBACK_FOCUS);
+      target?.focus();
+    });
   }
 
   function finish(submitted: ConnectFormValues) {
@@ -136,6 +153,7 @@ function ConnectWindow({
     }
     connect();
     applyConnection(record);
+    markConnecting(false);
     afterConnect(record.profile);
   }
 
@@ -145,6 +163,7 @@ function ConnectWindow({
       return;
     }
     setConnecting(true);
+    markConnecting(true);
     setHelpOpen(false);
     const timer = window.setTimeout(() => {
       timers.current.delete(timer);

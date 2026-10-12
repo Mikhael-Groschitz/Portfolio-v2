@@ -38,3 +38,8 @@ export function formatElapsed(milliseconds: number): string {
     .map((part) => pad(Math.floor(part)))
     .join(":");
 }
+
+export function formatDuration(milliseconds: number): string {
+  const whole = Math.max(0, Math.round(milliseconds));
+  return `${formatElapsed(whole)}.${pad(whole % 1000, 3)}`;
+}

@@ -1,101 +1,14 @@
-import type { MenuId, MenuItemId } from "@/content/types";
-
-export type MenuCommand =
-  | "newQuery"
-  | "showExplorer"
-  | "switchLanguage"
-  | "openCheatsheet"
-  | "startTour";
-
-export const NEW_QUERY_SHORTCUT = "Alt+N";
-
-export type MenuAction =
-  { kind: "command"; command: MenuCommand } | { kind: "link"; href: string };
-
-export interface MenuItem {
-  id: MenuItemId;
-  shortcut?: string;
-  action?: MenuAction;
-}
-
-export const SEPARATOR = "separator";
-
-export type MenuEntry = MenuItem | typeof SEPARATOR;
-
-export interface MenuDefinition {
-  id: MenuId;
-  entries: readonly MenuEntry[];
-}
-
-export const MENUS: readonly MenuDefinition[] = [
-  {
-    id: "file",
-    entries: [
-      {
-        id: "newQuery",
-        shortcut: NEW_QUERY_SHORTCUT,
-        action: { kind: "command", command: "newQuery" },
-      },
-      { id: "openFile", shortcut: "Ctrl+O" },
-      SEPARATOR,
-      { id: "save", shortcut: "Ctrl+S" },
-    ],
-  },
-  {
-    id: "edit",
-    entries: [
-      { id: "undo", shortcut: "Ctrl+Z" },
-      { id: "redo", shortcut: "Ctrl+Y" },
-      SEPARATOR,
-      { id: "cut", shortcut: "Ctrl+X" },
-      { id: "copy", shortcut: "Ctrl+C" },
-      { id: "paste", shortcut: "Ctrl+V" },
-    ],
-  },
-  {
-    id: "view",
-    entries: [
-      {
-        id: "objectExplorer",
-        action: { kind: "command", command: "showExplorer" },
-      },
-      { id: "fullScreen", shortcut: "Shift+Alt+Enter" },
-    ],
-  },
-  {
-    id: "tools",
-    entries: [
-      {
-        id: "language",
-        action: { kind: "command", command: "switchLanguage" },
-      },
-      SEPARATOR,
-      { id: "options" },
-    ],
-  },
-  {
-    id: "window",
-    entries: [{ id: "closeAllDocuments" }, { id: "resetWindowLayout" }],
-  },
-  {
-    id: "help",
-    entries: [
-      {
-        id: "cheatsheet",
-        action: { kind: "command", command: "openCheatsheet" },
-      },
-      { id: "tour", action: { kind: "command", command: "startTour" } },
-      SEPARATOR,
-      { id: "simpleVersion", action: { kind: "link", href: "/simple" } },
-    ],
-  },
-];
+import {
+  MENUS,
+  type MenuDefinition,
+} from "@/components/commands/command-model";
+import type { MenuId } from "@/content/types";
 
 export const MORE_MENUS = "more";
 
 export type MenuTriggerId = MenuId | typeof MORE_MENUS;
 
-export type TriggerVisibility = "compact" | "wide" | "always";
+type TriggerVisibility = "compact" | "wide" | "always";
 
 export interface MenuTrigger {
   id: MenuTriggerId;
@@ -144,12 +57,4 @@ export function isTabStop(
     return id === FIRST_TRIGGER.compact;
   }
   return false;
-}
-
-export function isMenuItem(entry: MenuEntry): entry is MenuItem {
-  return entry !== SEPARATOR;
-}
-
-export function wrapIndex(index: number, length: number): number {
-  return (index + length) % length;
 }

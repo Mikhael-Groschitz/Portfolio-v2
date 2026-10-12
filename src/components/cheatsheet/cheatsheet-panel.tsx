@@ -1,16 +1,20 @@
 "use client";
 
-import { type KeyboardEvent, type MouseEvent, useId } from "react";
-import {
-  CaretDownIcon,
-  CloseIcon,
-  NewQueryIcon,
-  PinIcon,
-  ProcedureIcon,
-  TableIcon,
-} from "@/components/icons";
+import { type KeyboardEvent, type MouseEvent, useId, useRef } from "react";
+import { useConnectionStatus } from "@/components/connect/use-connection-status";
+import { NewQueryIcon, ProcedureIcon, TableIcon } from "@/components/icons";
+import { isPlainClick } from "@/components/interaction";
 import { LocaleText } from "@/components/locale/locale-text";
 import { documentPath } from "@/components/shell/section-routes";
+import {
+  FloatingResizer,
+  WindowSplitter,
+  useAutoHide,
+} from "@/components/shell/tool-window";
+import {
+  ToolWindowControls,
+  type ToolWindowText,
+} from "@/components/shell/tool-window-controls";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import {
   DEFAULT_LOCALE,
@@ -20,30 +24,57 @@ import {
 import type { CheatsheetText, SectionId } from "@/content/types";
 import { CATALOG } from "@/engine/catalog";
 import { commandFor } from "@/engine/hints";
-import { CHEATSHEET_ID, useGuide } from "./guide-context";
+import { CHEATSHEET_ID, CHEATSHEET_WINDOW_ID, useGuide } from "./guide-context";
 import styles from "./cheatsheet.module.css";
 
-function isPlainClick(event: MouseEvent): boolean {
-  return (
-    event.button === 0 &&
-    !event.ctrlKey &&
-    !event.metaKey &&
-    !event.shiftKey &&
-    !event.altKey
-  );
+interface CheatsheetPanelProps {
+  text: Localized<CheatsheetText>;
+  windowText: Localized<ToolWindowText>;
+}
+
+function focusFirstItem() {
+  document
+    .querySelector<HTMLElement>(`#${CHEATSHEET_ID} [data-cheatsheet-item]`)
+    ?.focus({ preventScroll: true });
 }
 
 export function CheatsheetPanel({
   text,
-}: Readonly<{ text: Localized<CheatsheetText> }>) {
-  const { openSection, openQuery, query } = useWorkspace();
-  const { docked, sheetOpen, openCheatsheet, closeCheatsheet, tableOpened } =
+  windowText,
+}: Readonly<CheatsheetPanelProps>) {
+  const { openSection, openQuery, writeQuery, requestConnection } =
+    useWorkspace();
+  const { docked, sheetOpen, closeCheatsheet, chooseCheatsheet, stepDone } =
     useGuide();
+  const connected = useConnectionStatus() === "connected";
   const titleId = useId();
+  const frameRef = useRef<HTMLDivElement>(null);
+  const tabRef = useRef<HTMLButtonElement>(null);
+  const autoHide = useAutoHide("cheatsheet", {
+    containerRef: frameRef,
+    tabRef,
+    focusInside: focusFirstItem,
+  });
   const sheet = !docked;
 
   function label(pick: (entry: CheatsheetText) => string) {
     return <LocaleText text={mapLocalized(text, pick)} />;
+  }
+
+  function leaveSheet() {
+    if (sheet) {
+      closeCheatsheet();
+    }
+  }
+
+  function startQuery() {
+    leaveSheet();
+    if (!connected) {
+      requestConnection({ kind: "query" });
+      return;
+    }
+    openQuery();
+    stepDone("query");
   }
 
   function openFromList(event: MouseEvent, section: SectionId) {
@@ -51,43 +82,48 @@ export function CheatsheetPanel({
       return;
     }
     event.preventDefault();
-    openSection(section);
-    tableOpened();
-    if (sheet) {
-      closeCheatsheet();
+    leaveSheet();
+    if (!connected) {
+      requestConnection({ kind: "section", section });
+      return;
     }
+    openSection(section);
+    stepDone("tables");
   }
 
   function insertExample(command: string) {
-    const current = query.getSnapshot().text.trimEnd();
-    const next = current ? `${current}\n${command}` : command;
-    query.update({
-      text: next,
-      selectionStart: next.length,
-      selectionEnd: next.length,
-    });
-    if (sheet) {
-      closeCheatsheet();
+    leaveSheet();
+    if (connected) {
+      writeQuery(command);
+    } else {
+      requestConnection({ kind: "query", text: command });
     }
-    openQuery();
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLElement>) {
     if (sheetOpen && event.key === "Escape") {
       event.preventDefault();
       closeCheatsheet();
+      return;
     }
+    autoHide.handleKeyDown(event);
   }
 
   return (
-    <>
+    <div
+      ref={frameRef}
+      role="complementary"
+      aria-labelledby={titleId}
+      className={styles.frame}
+      onKeyDown={handleKeyDown}
+      {...autoHide.containerProps}
+    >
       <button
         type="button"
         className={styles.edgeTab}
         data-cheatsheet-tab=""
         aria-controls={CHEATSHEET_ID}
-        aria-expanded={false}
-        onClick={openCheatsheet}
+        {...autoHide.tabProps}
       >
         <span className={styles.edgeLabel}>
           {label((entry) => entry.title)}
@@ -95,32 +131,23 @@ export function CheatsheetPanel({
       </button>
       <div
         id={CHEATSHEET_ID}
-        role={sheetOpen ? "dialog" : "complementary"}
+        role={sheetOpen ? "dialog" : undefined}
         aria-modal={sheetOpen || undefined}
-        aria-labelledby={titleId}
+        aria-labelledby={sheetOpen ? titleId : undefined}
         className={styles.panel}
         data-sheet-open={sheetOpen}
-        onKeyDown={handleKeyDown}
       >
         <div className={styles.header}>
           <h2 id={titleId} className={styles.title}>
             {label((entry) => entry.title)}
           </h2>
-          <span className={styles.grip} aria-hidden="true" />
-          <span className={styles.headerIcons} aria-hidden="true">
-            <CaretDownIcon />
-            <PinIcon />
-          </span>
-          <button
-            type="button"
-            className={styles.close}
-            onClick={closeCheatsheet}
-          >
-            <CloseIcon />
-            <span className="visually-hidden">
-              {label((entry) => entry.close)}
-            </span>
-          </button>
+          <ToolWindowControls
+            windowId="cheatsheet"
+            panelId={CHEATSHEET_ID}
+            text={windowText}
+            onChoice={chooseCheatsheet}
+            onClose={closeCheatsheet}
+          />
         </div>
         <div className={styles.body}>
           <p className={styles.intro}>{label((entry) => entry.intro)}</p>
@@ -128,12 +155,29 @@ export function CheatsheetPanel({
             {label((entry) => entry.sectionsTitle)}
           </h3>
           <ul className={styles.list}>
+            <li>
+              <button
+                type="button"
+                className={styles.item}
+                data-cheatsheet-item=""
+                onClick={startQuery}
+              >
+                <span className={styles.itemIcon}>
+                  <NewQueryIcon />
+                </span>
+                <span className={styles.itemText}>
+                  {label((entry) => entry.newQuery.label)}
+                  <span className={styles.itemNote}>
+                    {label((entry) => entry.newQuery.description)}
+                  </span>
+                </span>
+              </button>
+            </li>
             {CATALOG.map((object) => (
               <li key={object.section}>
                 <a
                   href={documentPath(object.section)}
                   className={styles.item}
-                  data-cheatsheet-item=""
                   onClick={(event) => openFromList(event, object.section)}
                 >
                   <span className={styles.itemIcon}>
@@ -177,7 +221,19 @@ export function CheatsheetPanel({
             ))}
           </ul>
         </div>
+        <FloatingResizer
+          windowId="cheatsheet"
+          className={styles.floatingResizer}
+        />
       </div>
-    </>
+      <WindowSplitter
+        windowId="cheatsheet"
+        side="end"
+        containerId={CHEATSHEET_WINDOW_ID}
+        controls={CHEATSHEET_ID}
+        label={mapLocalized(text, (entry) => entry.resize)}
+        className={styles.windowSplitter}
+      />
+    </div>
   );
 }

@@ -1,9 +1,8 @@
-import { pageMetadata } from "@/app/site-metadata";
-import { SectionDocument } from "@/components/editor/section-document";
-import { HOME_SECTION } from "@/components/shell/section-routes";
+import { HOME_PAGE, pageMetadata } from "@/app/site-metadata";
+import { EmptyWorkspace } from "@/components/shell/empty-workspace";
 
-export const metadata = pageMetadata(HOME_SECTION);
+export const metadata = pageMetadata(HOME_PAGE);
 
 export default function HomePage() {
-  return <SectionDocument section={HOME_SECTION} />;
+  return <EmptyWorkspace />;
 }

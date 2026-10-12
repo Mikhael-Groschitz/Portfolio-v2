@@ -3,6 +3,7 @@ import { getTexts } from "@/content";
 import { LOCALES } from "@/content/locales";
 import robots from "./robots";
 import {
+  HOME_PAGE,
   INDEXED_PAGES,
   SITE_PAGES,
   SITE_URL,
@@ -18,10 +19,10 @@ import sitemap from "./sitemap";
 
 describe("page titles", () => {
   it("names the home page after the person and the headline", () => {
-    expect(pageTitle("about", getTexts("pt-BR"))).toBe(
+    expect(pageTitle(HOME_PAGE, getTexts("pt-BR"))).toBe(
       "Mikhael Groschitz Costa | Engenheiro de dados",
     );
-    expect(pageTitle("about", getTexts("en"))).toBe(
+    expect(pageTitle(HOME_PAGE, getTexts("en"))).toBe(
       "Mikhael Groschitz Costa | Data Engineer",
     );
   });
@@ -33,8 +34,8 @@ describe("page titles", () => {
     expect(pageTitle("career", getTexts("en"))).toBe(
       "Career | Mikhael Groschitz Costa",
     );
-    expect(pageTitle("simple", getTexts("pt-BR"))).toBe(
-      "Versão simples | Mikhael Groschitz Costa",
+    expect(pageTitle("about", getTexts("pt-BR"))).toBe(
+      "Sobre | Mikhael Groschitz Costa",
     );
     expect(pageTitle("query", getTexts("en"))).toBe(
       "New query | Mikhael Groschitz Costa",
@@ -53,9 +54,12 @@ describe("page titles", () => {
   it("knows the title of every address in both languages", () => {
     const titles = pageTitlesByPath();
     expect(Object.keys(titles).sort()).toEqual(
-      ["/", ...SITE_PAGES.map((page) => `/${page}`)].sort(),
+      SITE_PAGES.map(canonicalPath).sort(),
     );
-    expect(titles["/"]).toEqual(titles["/about"]);
+    expect(titles["/"]).toEqual({
+      "pt-BR": "Mikhael Groschitz Costa | Engenheiro de dados",
+      en: "Mikhael Groschitz Costa | Data Engineer",
+    });
     expect(titles["/career"]).toEqual({
       "pt-BR": "Carreira | Mikhael Groschitz Costa",
       en: "Career | Mikhael Groschitz Costa",
@@ -88,14 +92,15 @@ describe("page descriptions", () => {
 });
 
 describe("canonical addresses", () => {
-  it("treats /about as the home page", () => {
-    expect(canonicalPath("about")).toBe("/");
-    expect(pageMetadata("about").alternates?.canonical).toBe("/");
+  it("gives the empty start page the root address", () => {
+    expect(canonicalPath(HOME_PAGE)).toBe("/");
+    expect(pageMetadata(HOME_PAGE).alternates?.canonical).toBe("/");
   });
 
   it("keeps every other page on its own address", () => {
+    expect(canonicalPath("about")).toBe("/about");
+    expect(pageMetadata("about").alternates?.canonical).toBe("/about");
     expect(canonicalPath("career")).toBe("/career");
-    expect(canonicalPath("simple")).toBe("/simple");
     expect(canonicalPath("query")).toBe("/query");
     expect(pageMetadata("projects")).toMatchObject({
       title: "Projetos | Mikhael Groschitz Costa",
@@ -120,16 +125,16 @@ describe("site metadata", () => {
 });
 
 describe("sitemap and robots", () => {
-  it("lists each indexed page once, without /about and /query", () => {
+  it("lists the start page and every section, without /query", () => {
     expect(sitemap().map((entry) => entry.url)).toEqual([
       `${SITE_URL}/`,
+      `${SITE_URL}/about`,
       `${SITE_URL}/tech-stack`,
       `${SITE_URL}/career`,
       `${SITE_URL}/projects`,
       `${SITE_URL}/beyond-the-terminal`,
       `${SITE_URL}/contact`,
       `${SITE_URL}/resume`,
-      `${SITE_URL}/simple`,
     ]);
   });
 

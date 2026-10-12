@@ -1,13 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { SECTION_IDS } from "@/content/types";
 import {
-  DOCUMENT_IDS,
-  HOME_SECTION,
-  QUERY_DOCUMENT,
-  byDocument,
-  documentFromSegment,
+  QUERY_ROUTE,
   documentPath,
+  isDocumentId,
   isQueryDocument,
+  queryDocument,
+  queryFileName,
+  queryNumber,
+  routeFromSegment,
 } from "./section-routes";
 
 describe("document routes", () => {
@@ -23,31 +24,42 @@ describe("document routes", () => {
     ]);
   });
 
-  it("gives the new query its own address", () => {
-    expect(documentPath(QUERY_DOCUMENT)).toBe("/query");
-    expect(documentFromSegment("query")).toBe(QUERY_DOCUMENT);
-    expect(isQueryDocument(QUERY_DOCUMENT)).toBe(true);
-    expect(isQueryDocument("about")).toBe(false);
-  });
-
-  it("reads the document back from the address", () => {
+  it("reads the section back from the address", () => {
     for (const section of SECTION_IDS) {
-      expect(documentFromSegment(documentPath(section).slice(1))).toBe(section);
+      expect(routeFromSegment(documentPath(section).slice(1))).toBe(section);
     }
   });
 
-  it("builds one value for every document", () => {
-    expect(DOCUMENT_IDS).toEqual([...SECTION_IDS, QUERY_DOCUMENT]);
-    expect(byDocument(documentPath)).toEqual(
-      Object.fromEntries(
-        DOCUMENT_IDS.map((document) => [document, `/${document}`]),
-      ),
-    );
+  it("sends every new query to the same address", () => {
+    expect(documentPath(queryDocument(1))).toBe("/query");
+    expect(documentPath(queryDocument(7))).toBe("/query");
+    expect(routeFromSegment("query")).toBe(QUERY_ROUTE);
   });
 
-  it("opens About on the home page and on unknown addresses", () => {
-    expect(documentFromSegment(null)).toBe(HOME_SECTION);
-    expect(documentFromSegment("palette")).toBe(HOME_SECTION);
-    expect(HOME_SECTION).toBe("about");
+  it("opens an empty window on the home page and on unknown addresses", () => {
+    expect(routeFromSegment(null)).toBeNull();
+    expect(routeFromSegment("palette")).toBeNull();
+  });
+});
+
+describe("query documents", () => {
+  it("numbers the queries like SSMS", () => {
+    expect(queryFileName(queryDocument(1))).toBe("SQLQuery1.sql");
+    expect(queryFileName(queryDocument(12))).toBe("SQLQuery12.sql");
+    expect(queryNumber(queryDocument(3))).toBe(3);
+  });
+
+  it("tells queries and sections apart", () => {
+    expect(isQueryDocument(queryDocument(2))).toBe(true);
+    expect(isQueryDocument("career")).toBe(false);
+  });
+
+  it("only accepts known documents", () => {
+    expect(isDocumentId("about")).toBe(true);
+    expect(isDocumentId("query-4")).toBe(true);
+    expect(isDocumentId("query-0")).toBe(false);
+    expect(isDocumentId("query-x")).toBe(false);
+    expect(isDocumentId("palette")).toBe(false);
+    expect(isDocumentId(null)).toBe(false);
   });
 });

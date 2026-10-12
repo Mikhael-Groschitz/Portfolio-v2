@@ -1,24 +1,23 @@
 "use client";
 
-import { useGuide } from "@/components/cheatsheet/guide-context";
 import { ExplorerIcon } from "@/components/icons";
 import { LocaleText } from "@/components/locale/locale-text";
+import styles from "@/components/toolbar/toolbar.module.css";
 import type { Localized } from "@/content/locales";
-import { EXPLORER_ID, useShell } from "./shell-frame";
-import styles from "./toolbar.module.css";
+import { EXPLORER_ID } from "./element-ids";
+import { useShell } from "./shell-frame";
 
 export function ExplorerToggle({ label }: Readonly<{ label: Localized }>) {
   const { explorerOpen, openExplorer } = useShell();
-  const { pulse } = useGuide();
 
   return (
     <button
       type="button"
-      className={`${styles.button} ${styles.explorerToggle}`}
+      className={styles.button}
       aria-expanded={explorerOpen}
       aria-controls={EXPLORER_ID}
       data-tour="explorer-toggle"
-      data-highlight={pulse || undefined}
+      data-tip=""
       onClick={openExplorer}
     >
       <ExplorerIcon />

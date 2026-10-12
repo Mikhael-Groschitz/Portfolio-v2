@@ -1,3 +1,4 @@
+import { readStorage, writeStorage } from "@/components/browser-storage";
 import {
   DEFAULT_LOCALE,
   LOCALES,
@@ -7,7 +8,7 @@ import {
 
 export const LOCALE_STORAGE_KEY = "locale";
 export const LOCALE_ATTRIBUTE = "data-locale";
-export const FALLBACK_LOCALE: Locale = "en";
+const FALLBACK_LOCALE: Locale = "en";
 
 function primarySubtag(tag: string): string {
   return tag.split("-")[0].toLowerCase();
@@ -68,24 +69,15 @@ export function subscribeToLocale(onChange: () => void): () => void {
 export function readStoredLocale(
   storage?: Pick<Storage, "getItem">,
 ): Locale | null {
-  try {
-    const stored = (storage ?? window.localStorage).getItem(LOCALE_STORAGE_KEY);
-    return isLocale(stored) ? stored : null;
-  } catch {
-    return null;
-  }
+  const stored = readStorage("local", LOCALE_STORAGE_KEY, storage);
+  return isLocale(stored) ? stored : null;
 }
 
 export function storeLocale(
   locale: Locale,
   storage?: Pick<Storage, "setItem">,
 ): boolean {
-  try {
-    (storage ?? window.localStorage).setItem(LOCALE_STORAGE_KEY, locale);
-    return true;
-  } catch {
-    return false;
-  }
+  return writeStorage("local", LOCALE_STORAGE_KEY, locale, storage);
 }
 
 export function nextLocale(current: Locale): Locale {

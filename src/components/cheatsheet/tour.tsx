@@ -3,11 +3,13 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { useLanguage } from "@/components/locale/language-context";
 import { COMPACT_MEDIA_QUERY } from "@/components/shell/breakpoints";
+import { type WindowState, windowState } from "@/components/shell/layout-model";
 import { useShell } from "@/components/shell/shell-frame";
+import { useLayout } from "@/components/shell/use-layout";
 import { useMediaQuery } from "@/components/shell/use-media-query";
 import type { Localized } from "@/content/locales";
 import type { TourStepId, TourText } from "@/content/types";
-import { TOUR_STEPS, useGuide } from "./guide-context";
+import { CHEATSHEET_ID, TOUR_STEPS, useGuide } from "./guide-context";
 import { type CardPosition, type Placement, placeCard } from "./tour-placement";
 import styles from "./tour.module.css";
 
@@ -23,11 +25,22 @@ interface CardPlacement extends CardPosition {
   width: number;
 }
 
-function layoutOf(
-  step: TourStepId,
-  compact: boolean,
-  explorerOpen: boolean,
-): StepLayout {
+interface Surroundings {
+  compact: boolean;
+  explorerOpen: boolean;
+  docked: boolean;
+  cheatsheet: WindowState;
+}
+
+function cheatsheetInMenu({ docked, cheatsheet }: Surroundings): boolean {
+  return !docked || cheatsheet === "hidden" || cheatsheet === "collapsed";
+}
+
+function layoutOf(step: TourStepId, surroundings: Surroundings): StepLayout {
+  const { compact, explorerOpen, cheatsheet } = surroundings;
+  if (step === "query") {
+    return { target: '[data-tour="new-query"]', placement: "below" };
+  }
   if (step === "tables") {
     return compact && !explorerOpen
       ? { target: '[data-tour="explorer-toggle"]', placement: "below" }
@@ -36,26 +49,40 @@ function layoutOf(
           placement: compact ? "below" : "right",
         };
   }
-  if (step === "results") {
-    return { target: '[data-tour="results"]', placement: "above" };
+  if (cheatsheetInMenu(surroundings)) {
+    return { target: '[data-tour="help-menu"]', placement: "below" };
   }
-  return { target: '[data-tour="new-query"]', placement: "below" };
+  return {
+    target:
+      cheatsheet === "auto-hide"
+        ? "[data-cheatsheet-tab]"
+        : `#${CHEATSHEET_ID}`,
+    placement: "left",
+  };
+}
+
+function bodyOf(step: TourStepId, text: TourText, surroundings: Surroundings) {
+  if (step === "tables" && surroundings.compact && !surroundings.explorerOpen) {
+    return text.compactTablesText;
+  }
+  if (step === "cheatsheet" && cheatsheetInMenu(surroundings)) {
+    return text.menuCheatsheetText;
+  }
+  return text.steps[step].text;
 }
 
 interface TourCardProps {
   step: TourStepId;
   index: number;
   text: TourText;
-  compact: boolean;
-  explorerOpen: boolean;
+  surroundings: Surroundings;
 }
 
 function TourCard({
   step,
   index,
   text,
-  compact,
-  explorerOpen,
+  surroundings,
 }: Readonly<TourCardProps>) {
   const { nextTourStep, finishTour } = useGuide();
   const [position, setPosition] = useState<CardPlacement | null>(null);
@@ -63,7 +90,7 @@ function TourCard({
   const focused = useRef(false);
   const titleId = useId();
   const bodyId = useId();
-  const { target: selector, placement } = layoutOf(step, compact, explorerOpen);
+  const { target: selector, placement } = layoutOf(step, surroundings);
 
   useEffect(() => {
     const target = document.querySelector<HTMLElement>(selector);
@@ -116,10 +143,7 @@ function TourCard({
   }
 
   const last = index === TOUR_STEPS.length - 1;
-  const body =
-    step === "tables" && compact && !explorerOpen
-      ? text.compactTablesText
-      : text.steps[step].text;
+  const body = bodyOf(step, text, surroundings);
 
   return (
     <section
@@ -158,7 +182,8 @@ function TourCard({
 }
 
 export function Tour({ text }: Readonly<{ text: Localized<TourText> }>) {
-  const { tourIndex } = useGuide();
+  const { tourIndex, docked } = useGuide();
+  const cheatsheet = windowState(useLayout().cheatsheet);
   const { locale } = useLanguage();
   const { explorerOpen } = useShell();
   const compact = useMediaQuery(COMPACT_MEDIA_QUERY);
@@ -174,8 +199,7 @@ export function Tour({ text }: Readonly<{ text: Localized<TourText> }>) {
       step={step}
       index={tourIndex}
       text={text[locale]}
-      compact={compact}
-      explorerOpen={explorerOpen}
+      surroundings={{ compact, explorerOpen, docked, cheatsheet }}
     />
   );
 }

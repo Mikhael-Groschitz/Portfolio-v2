@@ -11,56 +11,57 @@ import {
   useState,
   useSyncExternalStore,
 } from "react";
+import { PROFILE_ATTRIBUTE } from "@/components/connect/connection-runtime";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { WIDE_MEDIA_QUERY } from "@/components/shell/breakpoints";
+import {
+  defaultCheatsheet,
+  setPlacement,
+} from "@/components/shell/layout-model";
+import { readLayout, updateLayout } from "@/components/shell/layout-store";
+import {
+  concealWindow,
+  revealWindow,
+} from "@/components/shell/tool-window-actions";
 import { useMediaQuery } from "@/components/shell/use-media-query";
-import type { Profile } from "@/content/profiles";
+import { useWorkspace } from "@/components/shell/workspace-context";
+import { type Profile, isProfile } from "@/content/profiles";
 import type { TourStepId } from "@/content/types";
 import {
-  type CheatsheetState,
-  applyCheatsheet,
-  defaultCheatsheet,
-  readCheatsheet,
-  readStoredCheatsheet,
-  storeCheatsheet,
-  subscribeToCheatsheet,
-} from "./cheatsheet-runtime";
-import {
   type SessionFlag,
+  clearFlag,
   readFlag,
   setFlag,
   subscribeToFlags,
 } from "./session-flags";
 
-export const TOUR_STEPS: readonly TourStepId[] = ["tables", "results", "query"];
+export const TOUR_STEPS: readonly TourStepId[] = [
+  "query",
+  "tables",
+  "cheatsheet",
+];
 export const CHEATSHEET_ID = "cheatsheet";
+export const CHEATSHEET_WINDOW_ID = "cheatsheet-window";
 
 const TOUR_DELAY_MS = 400;
 
 interface GuideContextValue {
   docked: boolean;
-  dockOpen: boolean;
   sheetOpen: boolean;
   openCheatsheet: () => void;
   closeCheatsheet: () => void;
+  chooseCheatsheet: () => void;
   tourIndex: number | null;
   startTour: () => void;
   nextTourStep: () => void;
   finishTour: () => void;
   pulse: boolean;
-  tableOpened: () => void;
+  stepDone: (step: TourStepId) => void;
   afterConnect: (profile: Profile) => void;
+  resetCheatsheet: () => void;
 }
 
 const GuideContext = createContext<GuideContextValue | null>(null);
-
-function readDockOnServer(): CheatsheetState {
-  return "open";
-}
-
-function readDockInBrowser(): CheatsheetState {
-  return readCheatsheet();
-}
 
 function useSessionFlag(flag: SessionFlag, onServer: boolean): boolean {
   return useSyncExternalStore(
@@ -76,27 +77,44 @@ function activeElement(): HTMLElement | null {
     : null;
 }
 
+function focusSelector(selector: string, options?: FocusOptions) {
+  document.querySelector<HTMLElement>(selector)?.focus(options);
+}
+
 function focusLater(selector: string) {
-  requestAnimationFrame(() =>
-    document.querySelector<HTMLElement>(selector)?.focus(),
+  requestAnimationFrame(() => focusSelector(selector));
+}
+
+function profileOnPage(): Profile {
+  const profile = document.documentElement.getAttribute(PROFILE_ATTRIBUTE);
+  return isProfile(profile) ? profile : "visitor";
+}
+
+function placeByProfile(profile: Profile) {
+  updateLayout((layout) =>
+    setPlacement(layout, "cheatsheet", defaultCheatsheet(profile)),
   );
 }
 
+const FIRST_ITEM = `#${CHEATSHEET_ID} [data-cheatsheet-item]`;
+
 export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
   const docked = useMediaQuery(WIDE_MEDIA_QUERY);
-  const dock = useSyncExternalStore(
-    subscribeToCheatsheet,
-    readDockInBrowser,
-    readDockOnServer,
-  );
   const connected = useConnectionStatus() === "connected";
-  const explored = useSessionFlag("tables-explored", true);
+  const { activeDocument } = useWorkspace();
+  const started = useSessionFlag("workspace-started", true);
   const [sheetRequested, setSheetRequested] = useState(false);
   const [tourIndex, setTourIndex] = useState<number | null>(null);
   const sheetReturnFocus = useRef<HTMLElement | null>(null);
   const tourReturnFocus = useRef<HTMLElement | null>(null);
   const timers = useRef(new Set<number>());
   const sheetOpen = !docked && sheetRequested;
+
+  useEffect(() => {
+    if (activeDocument !== null) {
+      setFlag("workspace-started");
+    }
+  }, [activeDocument]);
 
   useEffect(() => {
     const pending = timers.current;
@@ -107,27 +125,34 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
     };
   }, []);
 
+  const chooseCheatsheet = useCallback(() => {
+    setFlag("cheatsheet-placed");
+  }, []);
+
   const openCheatsheet = useCallback(() => {
     if (docked) {
-      applyCheatsheet("open");
-      storeCheatsheet("open");
-    } else {
-      sheetReturnFocus.current = activeElement();
-      setSheetRequested(true);
+      if (readLayout().cheatsheet.hidden) {
+        chooseCheatsheet();
+      }
+      revealWindow("cheatsheet", () =>
+        focusSelector(FIRST_ITEM, { preventScroll: true }),
+      );
+      return;
     }
-    focusLater(`#${CHEATSHEET_ID} [data-cheatsheet-item]`);
-  }, [docked]);
+    sheetReturnFocus.current = activeElement();
+    setSheetRequested(true);
+    focusLater(FIRST_ITEM);
+  }, [chooseCheatsheet, docked]);
 
   const closeCheatsheet = useCallback(() => {
     if (docked) {
-      applyCheatsheet("closed");
-      storeCheatsheet("closed");
-      focusLater("[data-cheatsheet-tab]");
+      chooseCheatsheet();
+      concealWindow("cheatsheet");
     } else {
       setSheetRequested(false);
       sheetReturnFocus.current?.focus();
     }
-  }, [docked]);
+  }, [chooseCheatsheet, docked]);
 
   const startTour = useCallback(() => {
     setFlag("tour-seen");
@@ -156,14 +181,21 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
   }, [finishTour, tourIndex]);
 
-  const tableOpened = useCallback(() => {
-    setFlag("tables-explored");
-    setTourIndex((index) => (index === 0 ? 1 : index));
+  const stepDone = useCallback((step: TourStepId) => {
+    setFlag("workspace-started");
+    const position = TOUR_STEPS.indexOf(step);
+    setTourIndex((index) =>
+      index === position && position < TOUR_STEPS.length - 1
+        ? index + 1
+        : index,
+    );
   }, []);
 
   const afterConnect = useCallback(
     (profile: Profile) => {
-      applyCheatsheet(readStoredCheatsheet() ?? defaultCheatsheet(profile));
+      if (!readFlag("cheatsheet-placed")) {
+        placeByProfile(profile);
+      }
       if (profile !== "visitor" || readFlag("tour-seen")) {
         return;
       }
@@ -176,35 +208,45 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
     [startTour],
   );
 
+  const resetCheatsheet = useCallback(() => {
+    clearFlag("cheatsheet-placed");
+    placeByProfile(profileOnPage());
+    setSheetRequested(false);
+  }, []);
+
   const value = useMemo(
     () => ({
       docked,
-      dockOpen: dock === "open",
       sheetOpen,
       openCheatsheet,
       closeCheatsheet,
+      chooseCheatsheet,
       tourIndex,
       startTour,
       nextTourStep,
       finishTour,
-      pulse: connected && !explored && tourIndex === null,
-      tableOpened,
+      pulse:
+        connected && !started && activeDocument === null && tourIndex === null,
+      stepDone,
       afterConnect,
+      resetCheatsheet,
     }),
     [
       docked,
-      dock,
       sheetOpen,
       openCheatsheet,
       closeCheatsheet,
+      chooseCheatsheet,
       tourIndex,
       startTour,
       nextTourStep,
       finishTour,
       connected,
-      explored,
-      tableOpened,
+      started,
+      activeDocument,
+      stepDone,
       afterConnect,
+      resetCheatsheet,
     ],
   );
 

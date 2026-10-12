@@ -1,4 +1,3 @@
-import type { Placeholder } from "./placeholder";
 import type { ByProfile } from "./profiles";
 
 export const SECTION_IDS = [
@@ -19,97 +18,143 @@ export function isSectionId(value: unknown): value is SectionId {
 
 export type YearMonth = `${number}-${number}`;
 
-export type CareerDate = YearMonth | Placeholder;
-
-export interface AboutRow {
+interface AboutRow {
   name: string;
   role: string;
   summary: string;
 }
 
-export interface TechStackRow {
+interface TechStackRow {
   category: string;
   technology: string;
 }
 
-export interface CareerRow {
+interface CareerRow {
   company: string;
   role: string;
-  startDate: CareerDate;
-  endDate: CareerDate | null;
+  startDate: YearMonth;
+  endDate: YearMonth | null;
   description: string;
 }
 
-export interface ProjectRow {
+interface ProjectRow {
   name: string;
   categories: string[];
   description: string;
   stack: string[];
   repoUrl: string | null;
   demoUrl: string | null;
-  image: string | null;
 }
 
-export interface BeyondTheTerminalRow {
+interface BeyondTheTerminalRow {
   trait: string;
   description: string;
 }
 
-export interface ContactRow {
+interface ContactRow {
   channel: string;
   value: string;
   url: string;
 }
 
-export interface ResumeRow {
+interface ResumeRow {
   fileName: string;
   url: string;
 }
 
-export interface SimpleVersionText {
-  title: string;
-  intro: string;
-  sectionsLabel: string;
-  sections: Record<SectionId, string>;
-  present: string;
-  repository: string;
-  demo: string;
-  technologies: string;
-  downloadResume: string;
-  opensInNewTab: string;
-  switchLanguage: string;
-  fullVersion: string;
-}
-
-export type SeoSectionId = Exclude<SectionId, "about">;
-
-export interface SeoText {
+interface SeoText {
   description: string;
-  sections: Record<SeoSectionId, string>;
-  simple: string;
+  sections: Record<SectionId, string>;
   imageAlt: string;
 }
 
-export type MenuId = "file" | "edit" | "view" | "tools" | "window" | "help";
+export type MenuId =
+  | "file"
+  | "edit"
+  | "view"
+  | "query"
+  | "git"
+  | "tools"
+  | "extensions"
+  | "window"
+  | "help";
 
-export type MenuItemId =
+export type CommandId =
+  | "connect"
+  | "disconnect"
   | "newQuery"
   | "openFile"
+  | "openFolder"
+  | "closeDocument"
   | "save"
+  | "saveAll"
   | "undo"
   | "redo"
   | "cut"
   | "copy"
   | "paste"
+  | "find"
+  | "selectAll"
   | "objectExplorer"
+  | "resultsPane"
+  | "cheatsheet"
   | "fullScreen"
-  | "language"
+  | "execute"
+  | "parse"
+  | "cancelQuery"
+  | "estimatedPlan"
+  | "queryDesigner"
+  | "templateParameters"
+  | "queryOptions"
+  | "actualPlan"
+  | "liveStatistics"
+  | "clientStatistics"
+  | "resultsToGrid"
+  | "resultsToText"
+  | "resultsToFile"
+  | "cloneRepository"
+  | "createRepository"
+  | "openOnGitHub"
+  | "gitSettings"
   | "options"
+  | "manageExtensions"
+  | "customizeMenu"
   | "closeAllDocuments"
   | "resetWindowLayout"
-  | "cheatsheet"
+  | "openCheatsheet"
   | "tour"
-  | "simpleVersion";
+  | "about"
+  | "navigateBackward"
+  | "navigateForward"
+  | "databaseEngineQuery"
+  | "deploy"
+  | "editorConnect"
+  | "editorDisconnect"
+  | "commentLines"
+  | "uncommentLines"
+  | "decreaseIndent"
+  | "increaseIndent"
+  | "customizeToolbar"
+  | "contact"
+  | "share"
+  | "explorerConnect"
+  | "explorerStop"
+  | "explorerFilter"
+  | "explorerRefresh"
+  | "activityMonitor"
+  | "pinTab";
+
+export type EditAction =
+  | "typing"
+  | "delete"
+  | "paste"
+  | "cut"
+  | "complete"
+  | "insert"
+  | "comment"
+  | "uncomment"
+  | "indent"
+  | "outdent";
 
 export interface CountText {
   one: string;
@@ -120,7 +165,79 @@ export interface MenuText {
   label: string;
   more: string;
   menus: Record<MenuId, string>;
-  items: Record<MenuItemId, string>;
+}
+
+interface ToastText {
+  illustrative: string;
+  shared: string;
+  shareFailed: string;
+  clipboardBlocked: string;
+  fullScreenBlocked: string;
+}
+
+interface SearchText {
+  label: string;
+  placeholder: string;
+  empty: string;
+  results: CountText;
+  groups: { sections: string; commands: string; examples: string };
+}
+
+export interface AccountText {
+  signIn: string;
+  label: string;
+  switchProfile: string;
+  disconnect: string;
+  profiles: ByProfile<string>;
+}
+
+export interface CornerText {
+  channels: string;
+}
+
+export interface StatusText {
+  ready: string;
+  connecting: string;
+  executing: string;
+  succeeded: string;
+  failed: string;
+  canceled: string;
+  repository: string;
+  repositoryHint: string;
+  notifications: string;
+  tipsTitle: string;
+  tips: string[];
+}
+
+interface OptionsText {
+  title: string;
+  language: string;
+  editor: string;
+  zoom: string;
+  motion: string;
+  reduceMotion: string;
+  systemMotion: string;
+  ok: string;
+  cancel: string;
+}
+
+interface AboutText {
+  title: string;
+  version: string;
+  description: string;
+  built: string;
+  disclaimer: string;
+  source: string;
+  close: string;
+}
+
+export interface FindText {
+  label: string;
+  previous: string;
+  next: string;
+  close: string;
+  count: string;
+  none: string;
 }
 
 export interface ResultsText {
@@ -142,6 +259,16 @@ export interface ResultsText {
   regenerated: string;
   gameStarted: string;
   opensInNewTab: string;
+  resize: string;
+  collapse: string;
+  expand: string;
+  maximize: string;
+  restore: string;
+  executionTime: string;
+  resultSet: string;
+  resizeGrids: string;
+  canceled: string;
+  textResults: string;
 }
 
 export interface GameOverlayText {
@@ -153,7 +280,6 @@ export interface GameOverlayText {
 export type CompletionKind = "keyword" | "table" | "procedure" | "database";
 
 export interface QueryText {
-  documentName: string;
   editorLabel: string;
   placeholder: string;
   suggestions: string;
@@ -162,6 +288,7 @@ export interface QueryText {
     objects: Record<SectionId, string>;
     use: string;
     spHelp: string;
+    spHelpObject: string;
     help: string;
   };
 }
@@ -169,15 +296,18 @@ export interface QueryText {
 export interface CheatsheetText {
   title: string;
   close: string;
+  move: string;
+  resize: string;
   intro: string;
   sectionsTitle: string;
+  newQuery: { label: string; description: string };
   sections: Record<SectionId, string>;
   exploreTitle: string;
   exploreIntro: string;
   examples: { command: string; description: string }[];
 }
 
-export type TourStepId = "tables" | "results" | "query";
+export type TourStepId = "query" | "tables" | "cheatsheet";
 
 export interface TourText {
   progress: string;
@@ -186,13 +316,16 @@ export interface TourText {
   done: string;
   steps: Record<TourStepId, { title: string; text: string }>;
   compactTablesText: string;
+  menuCheatsheetText: string;
 }
 
 export interface ConnectionText {
   connected: string;
+  disconnected: string;
   executing: string;
   succeeded: string;
   failed: string;
+  canceled: string;
   traveling: string;
   login: ByProfile<string>;
   rows: CountText;
@@ -258,21 +391,40 @@ export interface ConnectText {
   };
 }
 
+export interface WindowText {
+  menu: string;
+  moveHint: string;
+  float: string;
+  dock: string;
+  autoHide: string;
+  hide: string;
+}
+
 export interface ShellText {
   windowTitle: string;
   languageName: string;
   skipToContent: string;
   menu: MenuText;
   toolbar: {
-    newQuery: string;
+    standard: string;
+    sqlEditor: string;
+    explorer: string;
     databases: string;
-    execute: string;
-    simpleVersion: string;
+    database: string;
+    more: string;
+    backList: string;
+    openList: string;
+    undoList: string;
+    redoList: string;
   };
+  window: WindowText;
   explorer: {
     title: string;
     connect: string;
+    disconnect: string;
     close: string;
+    move: string;
+    resize: string;
     databases: string;
     tables: string;
     programmability: string;
@@ -280,9 +432,24 @@ export interface ShellText {
   };
   editor: {
     tabsLabel: string;
+    openTabs: string;
     noIssues: string;
+    zoom: string;
     line: string;
     column: string;
+    actions: Record<EditAction, string>;
+  };
+  commands: Record<CommandId, string>;
+  toast: ToastText;
+  search: SearchText;
+  account: AccountText;
+  corner: CornerText;
+  options: OptionsText;
+  about: AboutText;
+  find: FindText;
+  workspace: {
+    start: string;
+    noScript: string;
   };
   scripts: Record<SectionId, string[]>;
   results: ResultsText;
@@ -292,9 +459,7 @@ export interface ShellText {
   game: GameOverlayText;
   connection: ConnectionText;
   connect: ConnectText;
-  status: {
-    ready: string;
-  };
+  status: StatusText;
 }
 
 export interface Texts {
@@ -305,7 +470,7 @@ export interface Texts {
   beyondTheTerminal: BeyondTheTerminalRow[];
   contact: { intro: string; channels: ContactRow[] };
   resume: ResumeRow;
-  simpleVersion: SimpleVersionText;
+  sections: Record<SectionId, string>;
   seo: SeoText;
   shell: ShellText;
 }

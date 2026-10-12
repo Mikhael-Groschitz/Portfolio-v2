@@ -1,15 +1,17 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import {
   ConnectedIcon,
+  DisconnectIcon,
   SpinnerIcon,
   SuccessIcon,
-  TardisIcon,
   WarningIcon,
 } from "@/components/icons";
 import { ProfileText } from "@/components/connect/profile-text";
 import { useEasterEggs } from "@/components/easter-eggs/easter-egg-context";
+import { TardisBadge } from "@/components/easter-eggs/tardis";
 import { LocaleText } from "@/components/locale/locale-text";
 import { formatCount, formatElapsed } from "@/content/format";
 import { type Localized, mapLocalized } from "@/content/locales";
@@ -18,26 +20,37 @@ import type { ConnectionText } from "@/content/types";
 import { DATABASE, SERVER, V1_DATABASE } from "@/engine/catalog";
 import { rowCountOf } from "@/engine/execute";
 import { useWorkspace } from "./workspace-context";
-import type { Run } from "./workspace-state";
+import { type Run, isProvisional } from "./workspace-state";
 import styles from "./bars.module.css";
 
 type StatusKey =
-  "connected" | "executing" | "succeeded" | "failed" | "traveling";
+  | "connected"
+  | "disconnected"
+  | "executing"
+  | "succeeded"
+  | "failed"
+  | "canceled"
+  | "traveling";
 
 const STATUS_ICONS: Record<StatusKey, ReactNode> = {
   connected: <ConnectedIcon />,
+  disconnected: <DisconnectIcon />,
   executing: <SpinnerIcon />,
   succeeded: <SuccessIcon />,
   failed: <WarningIcon />,
-  traveling: <TardisIcon />,
+  canceled: <WarningIcon />,
+  traveling: <TardisBadge />,
 };
 
-function statusOf(run: Run | null): StatusKey {
+function statusOf(run: Run | null, online: boolean): StatusKey {
+  if (!online) {
+    return "disconnected";
+  }
   if (!run || (run.status === "done" && run.origin === "connection")) {
     return "connected";
   }
-  if (run.status === "executing") {
-    return "executing";
+  if (run.status === "executing" || run.status === "canceled") {
+    return run.status;
   }
   return run.status === "error" ? "failed" : "succeeded";
 }
@@ -50,23 +63,33 @@ function elapsedOf(run: Run | null): number {
   return run && run.status !== "executing" ? run.elapsedMs : 0;
 }
 
+function variantOf(traveling: boolean, online: boolean): string {
+  if (traveling) {
+    return styles.traveling;
+  }
+  return online ? "" : styles.disconnected;
+}
+
 export function ConnectionBar({
   text,
 }: Readonly<{ text: Localized<ConnectionText> }>) {
-  const { activeRun } = useWorkspace();
+  const { activeDocument, activeRun } = useWorkspace();
   const { traveling, boardTardis } = useEasterEggs();
-  const status = traveling ? "traveling" : statusOf(activeRun);
-  const rows = rowsOf(activeRun);
-  const elapsed = elapsedOf(activeRun);
+  const connection = useConnectionStatus();
+  const online = connection === "connected" || connection === "unknown";
+  if (!online && activeDocument === null) {
+    return null;
+  }
+  const shownRun = online || !isProvisional(activeRun) ? activeRun : null;
+  const status = traveling ? "traveling" : statusOf(shownRun, online);
+  const rows = rowsOf(shownRun);
+  const elapsed = elapsedOf(shownRun);
   const rowsText = mapLocalized(text, (bar) => formatCount(bar.rows, rows));
 
   return (
     <div
-      className={
-        traveling
-          ? `${styles.connectionBar} ${styles.traveling}`
-          : styles.connectionBar
-      }
+      className={`${styles.connectionBar} ${variantOf(traveling, online)}`}
+      data-standalone={activeDocument === null || undefined}
     >
       <span className={styles.connectionStatus}>
         {STATUS_ICONS[status]}
@@ -98,7 +121,7 @@ export function ConnectionBar({
         <LocaleText text={rowsText} />
       </span>
       <button type="button" className={styles.tardis} onClick={boardTardis}>
-        <TardisIcon />
+        <TardisBadge />
         <span className="visually-hidden">
           <LocaleText text={mapLocalized(text, (bar) => bar.timeTravel)} />
         </span>

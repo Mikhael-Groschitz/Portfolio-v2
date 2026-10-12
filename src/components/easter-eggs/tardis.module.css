@@ -1,0 +1,270 @@
+.tardis {
+  --tardis-width: calc(var(--tardis-size) * 0.4);
+  --tardis-height: calc(var(--tardis-size) * 0.86);
+  --tardis-half: calc(var(--tardis-width) / 2);
+
+  position: relative;
+  display: inline-block;
+  flex: none;
+  width: calc(var(--tardis-size) * 0.62);
+  height: var(--tardis-size);
+  perspective: calc(var(--tardis-size) * 5);
+}
+
+.model {
+  position: absolute;
+  inset-block-end: calc(var(--tardis-size) * 0.02);
+  inset-inline-start: calc(50% - var(--tardis-half));
+  width: var(--tardis-width);
+  height: var(--tardis-height);
+  transform: rotateX(-10deg);
+  transform-style: preserve-3d;
+}
+
+.spin,
+.turn {
+  position: absolute;
+  inset: 0;
+  transform-style: preserve-3d;
+}
+
+.spin {
+  animation: spin 7s linear infinite;
+}
+
+.turn {
+  animation: spin 1.4s linear infinite paused;
+}
+
+:where(button:hover, button:focus-visible) .turn {
+  animation-play-state: running;
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  backface-visibility: hidden;
+}
+
+.face[data-side="front"] {
+  transform: translateZ(var(--tardis-half));
+}
+
+.face[data-side="right"] {
+  transform: rotateY(90deg) translateZ(var(--tardis-half));
+}
+
+.face[data-side="back"] {
+  transform: rotateY(180deg) translateZ(var(--tardis-half));
+}
+
+.face[data-side="left"] {
+  transform: rotateY(-90deg) translateZ(var(--tardis-half));
+}
+
+.body {
+  fill: var(--tardis-fill, var(--tardis-body));
+}
+
+.shade {
+  fill: var(--tardis-edge, var(--tardis-shade));
+}
+
+.sign {
+  fill: var(--tardis-window);
+  opacity: 0.7;
+}
+
+.glass {
+  fill: var(--tardis-window);
+}
+
+.panel {
+  fill: none;
+  stroke: var(--tardis-edge, var(--tardis-shade));
+  stroke-width: 1.4;
+}
+
+.roof {
+  position: absolute;
+  inset-block-start: calc(var(--tardis-half) * -1);
+  inset-inline: 0;
+  height: var(--tardis-width);
+  background: var(--tardis-edge, var(--tardis-shade));
+  transform: rotateX(90deg);
+}
+
+.lamp {
+  position: absolute;
+  inset-block-start: calc(var(--tardis-size) * -0.1);
+  inset-inline-start: calc(50% - var(--tardis-width) * 0.11);
+  width: calc(var(--tardis-width) * 0.22);
+  height: calc(var(--tardis-size) * 0.1);
+  transform-style: preserve-3d;
+}
+
+.lamp > span {
+  position: absolute;
+  inset: 0;
+  border-radius: 1px;
+  background: var(--tardis-lamp);
+  box-shadow: 0 0 calc(var(--tardis-size) * 0.06) var(--tardis-lamp);
+  animation: glow 2.4s ease-in-out infinite alternate;
+}
+
+.lamp > span:last-child {
+  transform: rotateY(90deg);
+}
+
+.badge {
+  display: inline-flex;
+  perspective: 80px;
+}
+
+.badgeSpin,
+.badgeTurn {
+  display: flex;
+  transform-style: preserve-3d;
+}
+
+.badgeSpin {
+  animation: spin 7s linear infinite;
+}
+
+.badgeTurn {
+  animation: spin 1.4s linear infinite paused;
+}
+
+:where(button:hover, button:focus-visible) .badgeTurn {
+  animation-play-state: running;
+}
+
+.badgeIcon {
+  display: block;
+  fill: currentColor;
+}
+
+.badgeLamp {
+  animation: glow 2.4s ease-in-out infinite alternate;
+}
+
+.tardis[data-phase="depart"] {
+  animation: fade-out 2s linear forwards;
+}
+
+.tardis[data-phase="depart"] .spin {
+  animation: depart 2s cubic-bezier(0.55, 0, 1, 1) forwards;
+}
+
+.tardis[data-phase="arrive"] {
+  animation: fade-in 1.8s linear both;
+}
+
+.tardis[data-phase="arrive"] .spin {
+  animation: arrive 1.8s cubic-bezier(0, 0, 0.45, 1) both;
+}
+
+@keyframes spin {
+  to {
+    transform: rotateY(360deg);
+  }
+}
+
+@keyframes glow {
+  from {
+    opacity: 0.45;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes depart {
+  to {
+    transform: rotateY(1800deg);
+  }
+}
+
+@keyframes arrive {
+  from {
+    transform: rotateY(-1800deg);
+  }
+
+  to {
+    transform: rotateY(0deg);
+  }
+}
+
+@keyframes fade-out {
+  0%,
+  25% {
+    opacity: 1;
+  }
+
+  40% {
+    opacity: 0.35;
+  }
+
+  52% {
+    opacity: 0.9;
+  }
+
+  66% {
+    opacity: 0.25;
+  }
+
+  76% {
+    opacity: 0.6;
+  }
+
+  88% {
+    opacity: 0.1;
+  }
+
+  100% {
+    opacity: 0;
+  }
+}
+
+@keyframes fade-in {
+  0% {
+    opacity: 0;
+  }
+
+  15% {
+    opacity: 0.6;
+  }
+
+  30% {
+    opacity: 0.12;
+  }
+
+  45% {
+    opacity: 0.75;
+  }
+
+  65% {
+    opacity: 0.25;
+  }
+
+  80% {
+    opacity: 0.9;
+  }
+
+  100% {
+    opacity: 1;
+  }
+}
+
+:global(html[data-motion="reduce"]) .tardis,
+:global(html[data-motion="reduce"]) .tardis .spin,
+:global(html[data-motion="reduce"]) .tardis .turn,
+:global(html[data-motion="reduce"]) .tardis .lamp > span,
+:global(html[data-motion="reduce"]) .badge .badgeSpin,
+:global(html[data-motion="reduce"]) .badge .badgeTurn,
+:global(html[data-motion="reduce"]) .badge .badgeLamp {
+  animation: none;
+}

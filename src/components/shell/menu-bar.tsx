@@ -1,6 +1,5 @@
 "use client";
 
-import Link from "next/link";
 import {
   type FocusEvent,
   type KeyboardEvent,
@@ -10,34 +9,44 @@ import {
   useRef,
   useState,
 } from "react";
-import { useGuide } from "@/components/cheatsheet/guide-context";
+import { useCommands } from "@/components/commands/command-context";
+import {
+  arrowTarget,
+  useOutsidePointerDown,
+  wrapIndex,
+} from "@/components/interaction";
+import {
+  COMMANDS,
+  type MenuDefinition,
+  type MenuEntry,
+  isMenuCommand,
+  isMenuShown,
+  shortcutText,
+} from "@/components/commands/command-model";
 import { MenuIcon } from "@/components/icons";
 import { useLanguage } from "@/components/locale/language-context";
-import { nextLocale } from "@/components/locale/locale-runtime";
 import { LocaleText } from "@/components/locale/locale-text";
+import {
+  MenuItem,
+  MenuSeparator,
+  menuItemsIn,
+} from "@/components/menu/menu-item";
+import { commandItemRole } from "@/components/toolbar/command-menu-item";
 import { type Localized, mapLocalized } from "@/content/locales";
-import type { MenuText } from "@/content/types";
+import type { CommandId, MenuText } from "@/content/types";
 import {
   MENU_TRIGGERS,
   MORE_MENUS,
-  type MenuCommand,
-  type MenuEntry,
-  type MenuItem,
   type MenuTrigger,
   type MenuTriggerId,
-  isMenuItem,
   isTabStop,
-  wrapIndex,
 } from "./menu-model";
-import { useShell } from "./shell-frame";
-import { useWorkspace } from "./workspace-context";
 import styles from "./menu-bar.module.css";
 
 type ItemFocus = "first" | "last";
 
 interface MenuBarProps {
   text: Localized<MenuText>;
-  languageNames: Localized;
 }
 
 const VISIBILITY_CLASS: Record<MenuTrigger["visibility"], string> = {
@@ -46,22 +55,14 @@ const VISIBILITY_CLASS: Record<MenuTrigger["visibility"], string> = {
   always: "",
 };
 
-function menuItemsIn(container: HTMLElement | null): HTMLElement[] {
-  return Array.from(
-    container?.querySelectorAll<HTMLElement>('[role="menuitem"]') ?? [],
-  );
-}
-
 function focusItem(container: HTMLElement | null, itemFocus: ItemFocus) {
   const items = menuItemsIn(container);
   (itemFocus === "first" ? items[0] : items.at(-1))?.focus();
 }
 
-export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
-  const { locale, setLocale } = useLanguage();
-  const { showExplorer } = useShell();
-  const { openQuery } = useWorkspace();
-  const { openCheatsheet, startTour } = useGuide();
+export function MenuBar({ text }: Readonly<MenuBarProps>) {
+  const { locale } = useLanguage();
+  const commands = useCommands();
   const baseId = useId();
   const [openId, setOpenId] = useState<MenuTriggerId | null>(null);
   const [focusedId, setFocusedId] = useState<MenuTriggerId | null>(null);
@@ -69,6 +70,11 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
   const popupRef = useRef<HTMLDivElement>(null);
   const triggerRefs = useRef(new Map<MenuTriggerId, HTMLButtonElement>());
   const itemFocusRef = useRef<ItemFocus>("first");
+  const shownMenus = (trigger: MenuTrigger): MenuDefinition[] =>
+    trigger.menus.filter((menu) => isMenuShown(menu, commands.context));
+  const triggers = MENU_TRIGGERS.filter(
+    (trigger) => shownMenus(trigger).length > 0,
+  );
 
   useEffect(() => {
     if (openId !== null) {
@@ -76,19 +82,7 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
     }
   }, [openId]);
 
-  useEffect(() => {
-    if (openId === null) {
-      return;
-    }
-    function closeOnOutsidePointer(event: PointerEvent) {
-      if (!rootRef.current?.contains(event.target as Node)) {
-        setOpenId(null);
-      }
-    }
-    document.addEventListener("pointerdown", closeOnOutsidePointer);
-    return () =>
-      document.removeEventListener("pointerdown", closeOnOutsidePointer);
-  }, [openId]);
+  useOutsidePointerDown(rootRef, openId !== null, () => setOpenId(null));
 
   function openMenu(id: MenuTriggerId, itemFocus: ItemFocus = "first") {
     if (openId === id) {
@@ -126,24 +120,11 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
     }
   }
 
-  function runCommand(command: MenuCommand) {
-    const commands: Record<MenuCommand, () => void> = {
-      newQuery: openQuery,
-      showExplorer,
-      switchLanguage: () => setLocale(nextLocale(locale)),
-      openCheatsheet,
-      startTour,
-    };
-    commands[command]();
-  }
-
-  function activate(item: MenuItem, trigger: MenuTrigger) {
-    if (!item.action) {
+  function activate(id: CommandId, trigger: MenuTrigger) {
+    if (!commands.isEnabled(id)) {
       return;
     }
-    if (item.action.kind === "command") {
-      runCommand(item.action.command);
-    }
+    commands.run(id);
     const focusStayed =
       popupRef.current?.contains(document.activeElement) ?? false;
     setOpenId(null);
@@ -193,19 +174,13 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
   ) {
     const items = menuItemsIn(popupRef.current);
     const index = items.findIndex((item) => item === document.activeElement);
+    const target = arrowTarget(event.key, index, items.length, "vertical");
+    if (target !== undefined) {
+      event.preventDefault();
+      items[target]?.focus();
+      return;
+    }
     switch (event.key) {
-      case "ArrowDown":
-        items[wrapIndex(index + 1, items.length)]?.focus();
-        break;
-      case "ArrowUp":
-        items[wrapIndex(index - 1, items.length)]?.focus();
-        break;
-      case "Home":
-        items[0]?.focus();
-        break;
-      case "End":
-        items.at(-1)?.focus();
-        break;
       case "ArrowRight":
         moveTrigger(trigger.id, 1);
         break;
@@ -219,12 +194,6 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
       case "Tab":
         setOpenId(null);
         return;
-      case " ":
-        if (!(document.activeElement instanceof HTMLAnchorElement)) {
-          return;
-        }
-        document.activeElement.click();
-        break;
       default:
         return;
     }
@@ -240,60 +209,29 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
     }
   }
 
-  function renderItem(item: MenuItem, trigger: MenuTrigger) {
-    const label = text[locale].items[item.id];
-    const target = nextLocale(locale);
-    const content: ReactNode =
-      item.action?.kind === "command" &&
-      item.action.command === "switchLanguage" ? (
-        <span>
-          {label}: <span lang={target}>{languageNames[target]}</span>
-        </span>
-      ) : (
-        <span>{label}</span>
-      );
-    const shortcut = item.shortcut && (
-      <span className={styles.shortcut}>{item.shortcut}</span>
-    );
-
-    if (item.action?.kind === "link") {
-      return (
-        <Link
-          key={item.id}
-          href={item.action.href}
-          role="menuitem"
-          tabIndex={-1}
-          className={styles.item}
-          onClick={() => activate(item, trigger)}
-        >
-          {content}
-          {shortcut}
-        </Link>
-      );
-    }
-
+  function renderItem(id: CommandId, trigger: MenuTrigger) {
+    const checked = commands.isChecked(id);
     return (
-      <button
-        key={item.id}
-        type="button"
-        role="menuitem"
-        tabIndex={-1}
-        aria-disabled={item.action ? undefined : true}
-        className={styles.item}
-        onClick={() => activate(item, trigger)}
-      >
-        {content}
-        {shortcut}
-      </button>
+      <MenuItem
+        key={id}
+        label={commands.label(id)}
+        role={commandItemRole(id, checked)}
+        checked={checked}
+        disabled={!commands.isEnabled(id)}
+        shortcut={shortcutText(id)}
+        keyShortcuts={COMMANDS[id].shortcut}
+        data={{ "data-command": id }}
+        onClick={() => activate(id, trigger)}
+      />
     );
   }
 
   function renderEntries(entries: readonly MenuEntry[], trigger: MenuTrigger) {
     return entries.map((entry, index) =>
-      isMenuItem(entry) ? (
+      isMenuCommand(entry) ? (
         renderItem(entry, trigger)
       ) : (
-        <hr key={`separator-${index}`} className={styles.separator} />
+        <MenuSeparator key={`separator-${index}`} />
       ),
     );
   }
@@ -303,7 +241,8 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
     popupId: string,
     triggerId: string,
   ) {
-    const [onlyMenu] = trigger.menus;
+    const menus = shownMenus(trigger);
+    const [onlyMenu] = menus;
     return (
       <div
         ref={popupRef}
@@ -314,9 +253,9 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
         className={styles.popup}
         onKeyDown={(event) => handlePopupKeyDown(event, trigger)}
       >
-        {trigger.menus.length === 1
+        {trigger.id !== MORE_MENUS
           ? renderEntries(onlyMenu.entries, trigger)
-          : trigger.menus.map((menu) => (
+          : menus.map((menu) => (
               <div
                 key={menu.id}
                 role="group"
@@ -361,7 +300,7 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
         className={styles.menuBar}
         onBlur={handleBlur}
       >
-        {MENU_TRIGGERS.map((trigger) => {
+        {triggers.map((trigger) => {
           const triggerId = `${baseId}-${trigger.id}`;
           const popupId = `${triggerId}-menu`;
           const open = openId === trigger.id;
@@ -388,6 +327,7 @@ export function MenuBar({ text, languageNames }: Readonly<MenuBarProps>) {
                 aria-controls={open ? popupId : undefined}
                 tabIndex={isTabStop(trigger.id, focusedId) ? 0 : -1}
                 className={styles.trigger}
+                data-tour={trigger.id === "help" ? "help-menu" : undefined}
                 onClick={() => (open ? setOpenId(null) : openMenu(trigger.id))}
                 onKeyDown={(event) => handleTriggerKeyDown(event, trigger)}
                 onFocus={() => setFocusedId(trigger.id)}

@@ -1,10 +1,17 @@
 import { describe, expect, it } from "vitest";
 import type { Localized } from "@/content/locales";
 import type { ExecutionOutcome } from "@/engine/execute";
+import { NO_VISITS } from "./navigation-history";
+import { queryDocument } from "./section-routes";
 import {
+  type WorkspaceAction,
+  type WorkspaceState,
+  activeDocumentOf,
   connectionRun,
   initialWorkspace,
+  isProvisional,
   neighborAfterClose,
+  nextQueryDocument,
   userRun,
   withActive,
   workspaceReducer,
@@ -17,6 +24,7 @@ const rows: ExecutionOutcome = {
     {
       kind: "rows",
       resultSet: { source: "dbo.About", columns: [], rows: [] },
+      statement: 0,
     },
   ],
 };
@@ -35,9 +43,28 @@ const travel: ExecutionOutcome = {
 };
 const departure: Localized<ExecutionOutcome> = { "pt-BR": travel, en: travel };
 const moment = new Date(0);
+const first = queryDocument(1);
+const second = queryDocument(2);
 
-describe("tabs", () => {
-  it("starts with the tab of the current address, already run", () => {
+function apply(state: WorkspaceState, ...actions: WorkspaceAction[]) {
+  return actions.reduce(workspaceReducer, state);
+}
+
+describe("starting the workspace", () => {
+  it("opens without any tab on the home page", () => {
+    const state = initialWorkspace(null, null);
+    expect(state).toEqual({
+      tabs: [],
+      runs: {},
+      effect: null,
+      activeQuery: null,
+      queryCount: 0,
+      visits: NO_VISITS,
+    });
+    expect(activeDocumentOf(state, null)).toBeNull();
+  });
+
+  it("opens the tab of a section address with results still to confirm", () => {
     const state = initialWorkspace("career", success);
     expect(state.tabs).toEqual(["career"]);
     expect(state.runs.career).toMatchObject({
@@ -45,41 +72,83 @@ describe("tabs", () => {
       origin: "connection",
       completedAt: null,
     });
+    expect(isProvisional(state.runs.career ?? null)).toBe(true);
   });
 
-  it("opens a tab once and never duplicates it", () => {
-    const opened = workspaceReducer(initialWorkspace("about", success), {
-      type: "open",
-      document: "career",
-      active: "about",
+  it("opens SQLQuery1 on the query address", () => {
+    const state = initialWorkspace("query", null);
+    expect(state).toMatchObject({
+      tabs: [first],
+      runs: {},
+      activeQuery: first,
+      queryCount: 1,
     });
-    const again = workspaceReducer(opened, {
+    expect(activeDocumentOf(state, "query")).toBe(first);
+  });
+});
+
+describe("tabs", () => {
+  it("opens a tab once and never duplicates it", () => {
+    const state = apply(
+      initialWorkspace("about", success),
+      { type: "open", document: "career", active: "about" },
+      { type: "open", document: "career", active: "career" },
+    );
+    expect(state.tabs).toEqual(["about", "career"]);
+  });
+
+  it("numbers every new query, even after one was closed", () => {
+    const empty = initialWorkspace(null, null);
+    expect(nextQueryDocument(empty, null)).toBe(first);
+    const opened = apply(empty, {
       type: "open",
-      document: "career",
+      document: first,
+      active: null,
+    });
+    expect(nextQueryDocument(opened, first)).toBe(second);
+    const closed = apply(opened, {
+      type: "close",
+      document: first,
+      active: first,
+      next: null,
+    });
+    expect(nextQueryDocument(closed, null)).toBe(second);
+  });
+
+  it("counts the query reached through the address before opening another", () => {
+    const empty = initialWorkspace(null, null);
+    const reached = activeDocumentOf(empty, "query");
+    expect(reached).toBe(first);
+    expect(nextQueryDocument(empty, reached)).toBe(second);
+    const state = apply(empty, {
+      type: "open",
+      document: "about",
+      active: reached,
+    });
+    expect(state).toMatchObject({
+      tabs: [first, "about"],
+      activeQuery: first,
+      queryCount: 1,
+    });
+  });
+
+  it("remembers which query the query address shows", () => {
+    const state = apply(
+      initialWorkspace(null, null),
+      { type: "open", document: first, active: null },
+      { type: "open", document: "career", active: first },
+    );
+    expect(activeDocumentOf(state, "query")).toBe(first);
+    const later = apply(state, {
+      type: "open",
+      document: second,
       active: "career",
     });
-    expect(again.tabs).toEqual(["about", "career"]);
-  });
-
-  it("starts the new query without results", () => {
-    expect(initialWorkspace("query", null)).toEqual({
-      tabs: ["query"],
-      runs: {},
-      effect: null,
-    });
-  });
-
-  it("opens the new query next to the sections", () => {
-    const state = workspaceReducer(initialWorkspace("about", success), {
-      type: "open",
-      document: "query",
-      active: "about",
-    });
-    expect(state.tabs).toEqual(["about", "query"]);
+    expect(activeDocumentOf(later, "query")).toBe(second);
   });
 
   it("keeps the tab reached through back and forward", () => {
-    const state = workspaceReducer(initialWorkspace("about", success), {
+    const state = apply(initialWorkspace("about", success), {
       type: "open",
       document: "contact",
       active: "projects",
@@ -87,38 +156,99 @@ describe("tabs", () => {
     expect(state.tabs).toEqual(["about", "projects", "contact"]);
   });
 
-  it("closes tabs with their results but always keeps one open", () => {
-    const two = workspaceReducer(initialWorkspace("about", success), {
-      type: "open",
-      document: "career",
-      active: "about",
-    });
-    const one = workspaceReducer(two, {
-      type: "close",
-      document: "about",
-      active: "career",
-    });
-    expect(one.tabs).toEqual(["career"]);
-    expect(one.runs.about).toBeUndefined();
+  it("closes every tab with its results, the last one too", () => {
+    const state = apply(
+      initialWorkspace("about", success),
+      { type: "open", document: "career", active: "about" },
+      { type: "close", document: "about", active: "career", next: null },
+    );
+    expect(state.tabs).toEqual(["career"]);
+    expect(state.runs.about).toBeUndefined();
     expect(
-      workspaceReducer(one, {
+      apply(state, {
         type: "close",
         document: "career",
         active: "career",
+        next: null,
       }).tabs,
-    ).toEqual(["career"]);
+    ).toEqual([]);
+  });
+
+  it("shows the neighbor query when the active query closes", () => {
+    const two = apply(
+      initialWorkspace(null, null),
+      { type: "open", document: first, active: null },
+      { type: "open", document: second, active: first },
+    );
+    const closedSecond = apply(two, {
+      type: "close",
+      document: second,
+      active: second,
+      next: first,
+    });
+    expect(closedSecond.activeQuery).toBe(first);
+    const mixed = apply(
+      initialWorkspace(null, null),
+      { type: "open", document: first, active: null },
+      { type: "open", document: "career", active: first },
+      { type: "close", document: first, active: "career", next: null },
+    );
+    expect(mixed.activeQuery).toBeNull();
+  });
+});
+
+describe("navigation between tabs", () => {
+  it("remembers the tabs in the order they were visited", () => {
+    const state = apply(
+      initialWorkspace("about", success),
+      { type: "open", document: first, active: "about" },
+      { type: "open", document: "career", active: first },
+    );
+    expect(state.visits).toEqual({
+      entries: ["about", first, "career"],
+      index: 2,
+    });
+  });
+
+  it("goes back to a query and shows it on the query address", () => {
+    const state = apply(
+      initialWorkspace(null, null),
+      { type: "open", document: first, active: null },
+      { type: "open", document: second, active: first },
+      { type: "open", document: "career", active: second },
+      { type: "navigate", index: 0 },
+    );
+    expect(state.visits.index).toBe(0);
+    expect(state.activeQuery).toBe(first);
+    expect(apply(state, { type: "navigate", index: 0 })).toBe(state);
+    expect(apply(state, { type: "navigate", index: 7 })).toBe(state);
+  });
+
+  it("forgets closed tabs and follows the tab shown next", () => {
+    const state = apply(
+      initialWorkspace("about", success),
+      { type: "open", document: "career", active: "about" },
+      { type: "open", document: "contact", active: "career" },
+      { type: "navigate", index: 1 },
+      { type: "close", document: "career", active: "career", next: "contact" },
+    );
+    expect(state.visits).toEqual({
+      entries: ["about", "contact"],
+      index: 1,
+    });
+    expect(apply(state, { type: "closeAll" }).visits).toEqual(NO_VISITS);
   });
 });
 
 describe("runs", () => {
   it("goes from executing to done", () => {
-    const started = workspaceReducer(initialWorkspace("about", success), {
+    const started = apply(initialWorkspace("about", success), {
       type: "start",
       document: "about",
       id: 1,
     });
     expect(started.runs.about).toEqual({ id: 1, status: "executing" });
-    const finished = workspaceReducer(started, {
+    const finished = apply(started, {
       type: "finish",
       document: "about",
       run: userRun(1, success, moment, 150),
@@ -128,6 +258,7 @@ describe("runs", () => {
       origin: "user",
       elapsedMs: 150,
     });
+    expect(isProvisional(finished.runs.about ?? null)).toBe(false);
   });
 
   it("marks failed runs as errors", () => {
@@ -137,57 +268,50 @@ describe("runs", () => {
   });
 
   it("ignores a run that was replaced or closed", () => {
-    const first = workspaceReducer(initialWorkspace("about", success), {
-      type: "start",
-      document: "about",
-      id: 1,
-    });
-    const second = workspaceReducer(first, {
-      type: "start",
-      document: "about",
-      id: 2,
-    });
-    const stale = workspaceReducer(second, {
-      type: "finish",
-      document: "about",
-      run: userRun(1, success, moment, 1),
-    });
+    const stale = apply(
+      initialWorkspace("about", success),
+      { type: "start", document: "about", id: 1 },
+      { type: "start", document: "about", id: 2 },
+      {
+        type: "finish",
+        document: "about",
+        run: userRun(1, success, moment, 1),
+      },
+    );
     expect(stale.runs.about).toEqual({ id: 2, status: "executing" });
   });
 
-  it("runs the current section again when the visitor connects", () => {
-    const connected = workspaceReducer(initialWorkspace("about", success), {
+  it("confirms the results of a section address when the visitor connects", () => {
+    const connected = apply(initialWorkspace("career", success), {
       type: "connect",
       document: "career",
       run: connectionRun(success, { id: 3, completedAt: moment }),
     });
-    expect(connected.tabs).toEqual(["about", "career"]);
+    expect(connected.tabs).toEqual(["career"]);
     expect(connected.runs.career).toMatchObject({
       id: 3,
-      status: "done",
       origin: "connection",
       completedAt: moment,
     });
-    expect(connected.runs.about).toMatchObject({ id: 0 });
+    expect(isProvisional(connected.runs.career ?? null)).toBe(false);
   });
 });
 
 describe("effects", () => {
   function finish(
-    state: ReturnType<typeof initialWorkspace>,
+    state: WorkspaceState,
     id: number,
     outcomes: Localized<ExecutionOutcome>,
   ) {
-    const started = workspaceReducer(state, {
-      type: "start",
-      document: "query",
-      id,
-    });
-    return workspaceReducer(started, {
-      type: "finish",
-      document: "query",
-      run: userRun(id, outcomes, moment, 150),
-    });
+    return apply(
+      state,
+      { type: "start", document: first, id },
+      {
+        type: "finish",
+        document: first,
+        run: userRun(id, outcomes, moment, 150),
+      },
+    );
   }
 
   it("remembers the effect of the last run that asked for one", () => {
@@ -200,24 +324,23 @@ describe("effects", () => {
   });
 
   it("ignores the effect of a run that was replaced", () => {
-    const started = workspaceReducer(initialWorkspace("query", null), {
-      type: "start",
-      document: "query",
-      id: 2,
-    });
-    const stale = workspaceReducer(started, {
-      type: "finish",
-      document: "query",
-      run: userRun(1, departure, moment, 150),
-    });
+    const stale = apply(
+      initialWorkspace("query", null),
+      { type: "start", document: first, id: 2 },
+      {
+        type: "finish",
+        document: first,
+        run: userRun(1, departure, moment, 150),
+      },
+    );
     expect(stale.effect).toBeNull();
   });
 
-  it("keeps the effect when tabs close or a connection run arrives", () => {
+  it("keeps the effect when a connection run arrives", () => {
     const traveled = finish(initialWorkspace("query", null), 4, departure);
-    const connected = workspaceReducer(traveled, {
+    const connected = apply(traveled, {
       type: "connect",
-      document: "query",
+      document: first,
       run: connectionRun(success, { id: 5, completedAt: moment }),
     });
     expect(connected.effect).toEqual({ id: 4, kind: "travel" });
@@ -228,6 +351,7 @@ describe("withActive", () => {
   it("adds the active tab only when it is missing", () => {
     expect(withActive(["about"], "about")).toEqual(["about"]);
     expect(withActive(["about"], "resume")).toEqual(["about", "resume"]);
+    expect(withActive(["about"], null)).toEqual(["about"]);
   });
 });
 
@@ -236,5 +360,9 @@ describe("neighborAfterClose", () => {
     const tabs = ["about", "career", "contact"] as const;
     expect(neighborAfterClose(tabs, "career")).toBe("contact");
     expect(neighborAfterClose(tabs, "contact")).toBe("career");
+  });
+
+  it("finds nothing when the last tab closes", () => {
+    expect(neighborAfterClose(["about"], "about")).toBeNull();
   });
 });

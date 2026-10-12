@@ -17,17 +17,18 @@ export interface TreeNode {
   id: string;
   label: TreeLabel;
   icon: TreeIcon;
+  href?: string;
   children?: readonly TreeNode[];
 }
 
-export interface VisibleNode {
+interface VisibleNode {
   id: string;
   parentId: string | null;
   expandable: boolean;
   expanded: boolean;
 }
 
-export type TreeMove =
+type TreeMove =
   | { type: "focus"; id: string }
   | { type: "toggle"; id: string }
   | { type: "activate"; id: string };

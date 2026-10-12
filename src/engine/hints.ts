@@ -38,14 +38,18 @@ function resembles(word: string, name: string): boolean {
   );
 }
 
-export function hintFor(statement: string): QueryHint {
+export function similarObject(statement: string): CatalogObject | undefined {
   const words = statement
     .toLowerCase()
     .split(/[^\p{L}\p{N}_]+/u)
     .filter(Boolean);
-  const similar = CATALOG.find((object) =>
+  return CATALOG.find((object) =>
     words.some((word) => resembles(word, object.name.toLowerCase())),
   );
+}
+
+export function hintFor(statement: string): QueryHint {
+  const similar = similarObject(statement);
   return similar
     ? { kind: "similar", command: commandFor(similar) }
     : { kind: "help", command: commandFor(CATALOG[0]) };

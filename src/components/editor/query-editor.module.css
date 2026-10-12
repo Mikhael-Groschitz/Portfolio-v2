@@ -1,3 +1,11 @@
+.frame {
+  position: relative;
+  display: flex;
+  flex: var(--editor-grow, 45) 1 0;
+  min-width: 0;
+  min-height: 96px;
+}
+
 .editor {
   --popup-width: min(340px, calc(100vw - 96px));
 
@@ -5,14 +13,13 @@
   display: grid;
   grid-template-columns: 52px minmax(calc(100% - 52px), max-content);
   flex: 1;
-  align-content: start;
   min-width: 0;
-  min-height: 96px;
+  min-height: 0;
   overflow: auto;
   background: var(--bg-editor);
   font-family: var(--font-code);
-  font-size: 14px;
-  line-height: 20px;
+  font-size: var(--editor-font-size, 14px);
+  line-height: var(--editor-line-height, 20px);
 }
 
 .editor:focus-within {
@@ -41,6 +48,7 @@
   display: grid;
 }
 
+.marks,
 .highlight,
 .input,
 .placeholder {
@@ -53,9 +61,90 @@
   tab-size: 4;
 }
 
+.marks,
 .highlight,
 .input {
   white-space: pre;
+}
+
+.marks {
+  color: transparent;
+  pointer-events: none;
+}
+
+.mark {
+  border-radius: 1px;
+  background: transparent;
+  color: transparent;
+  outline: 1px solid
+    color-mix(in srgb, var(--status-warning-icon) 60%, transparent);
+}
+
+.mark[data-current] {
+  outline: 2px solid var(--status-warning-icon);
+}
+
+.findBar {
+  position: absolute;
+  inset-block-start: 4px;
+  inset-inline-end: 20px;
+  z-index: 3;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px;
+  border: 1px solid var(--border);
+  background: var(--bg-panel);
+  font-family: var(--font-ui);
+  font-size: 12px;
+  box-shadow: 0 4px 12px color-mix(in srgb, var(--bg-window) 80%, transparent);
+}
+
+.findInput {
+  width: min(200px, 40vw);
+  height: 24px;
+  padding-inline: 6px;
+  border: 1px solid var(--focus-ring);
+  border-radius: 2px;
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+}
+
+.findInput:focus {
+  outline: none;
+}
+
+.findCount {
+  min-width: 84px;
+  padding-inline: 6px;
+  color: var(--text-muted);
+  white-space: nowrap;
+}
+
+.findButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--icon);
+}
+
+.findButton:hover:not(:disabled) {
+  background: var(--bg-tab-active);
+}
+
+.findButton:disabled {
+  color: var(--text-disabled);
+}
+
+.findButton:focus-visible {
+  outline-offset: -2px;
 }
 
 .highlight {
@@ -88,7 +177,7 @@
 
 .completion {
   position: absolute;
-  inset-block-start: calc(var(--line) * 20px + 6px);
+  inset-block-start: calc(var(--line) * var(--editor-line-height, 20px) + 6px);
   inset-inline-start: max(
     0px,
     min(calc((var(--column) - 1) * 1ch + 6px), calc(100% - var(--popup-width)))
@@ -160,10 +249,25 @@
   color: var(--icon);
 }
 
+:global(html[data-results="maximized"]) [data-has-results] > .frame {
+  display: none;
+}
+
 @media (max-width: 767px) {
+  :global(html[data-results="maximized"]) [data-has-results] > .frame {
+    display: flex;
+  }
+
+  .frame {
+    min-height: 180px;
+  }
+
   .editor {
     grid-template-columns: 36px minmax(calc(100% - 36px), max-content);
-    min-height: 180px;
+  }
+
+  .findCount {
+    min-width: 0;
   }
 
   .gutter {

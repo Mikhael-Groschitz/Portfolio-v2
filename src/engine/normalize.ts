@@ -1,10 +1,12 @@
 export interface Statement {
   text: string;
   line: number;
+  original: string;
 }
 
 interface Token {
   text: string;
+  raw: string;
   line: number;
 }
 
@@ -54,7 +56,7 @@ function tokenize(input: string): Token[] {
       break;
     }
     const text = raw === name ? raw.replace(/[[\]]/g, "") : raw;
-    tokens.push({ text: text.toLowerCase(), line });
+    tokens.push({ text: text.toLowerCase(), raw, line });
     index += raw.length;
     line += countLines(raw);
   }
@@ -70,6 +72,7 @@ export function splitStatements(input: string): Statement[] {
       statements.push({
         text: current.map((token) => token.text).join(" "),
         line: current[0].line,
+        original: current.map((token) => token.raw).join(" "),
       });
       current = [];
     }

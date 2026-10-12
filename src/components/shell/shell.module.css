@@ -1,6 +1,8 @@
 .shell {
+  --explorer-track: var(--explorer-width, 300px);
+
   display: grid;
-  grid-template-columns: minmax(240px, 300px) minmax(0, 1fr);
+  grid-template-columns: var(--explorer-track) minmax(0, 1fr);
   grid-template-rows: auto minmax(0, 1fr) auto;
   grid-template-areas:
     "chrome chrome"
@@ -10,6 +12,7 @@
   height: 100dvh;
   min-height: 520px;
   overflow: hidden;
+  overflow: clip;
   background: var(--bg-window);
   color: var(--text);
   font-size: 13px;
@@ -22,12 +25,37 @@
 }
 
 .explorer {
+  position: relative;
   grid-area: explorer;
   display: flex;
-  flex-direction: column;
+  min-width: 0;
   min-height: 0;
   padding-inline-start: 6px;
   padding-block-end: 6px;
+}
+
+.explorerTab {
+  display: none;
+}
+
+.explorerPanel {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+
+.explorer > .explorerSplitter {
+  position: absolute;
+  z-index: 3;
+  inset-block: 0 6px;
+  inset-inline-end: -6px;
+}
+
+.floatingResizer {
+  display: none;
 }
 
 .workspace {
@@ -58,11 +86,6 @@
 
 .backdrop[hidden] {
   display: none;
-}
-
-:global(html[data-connection="pending"]) .workspace,
-:global(html[data-connection="pending"]) .guide {
-  visibility: hidden;
 }
 
 .shell[data-traveling] {
@@ -129,9 +152,107 @@
   }
 }
 
+:global(html[data-explorer="collapsed"]) .shell,
+:global(html[data-explorer="floating"]) .shell,
+:global(html[data-explorer="hidden"]) .shell {
+  --explorer-track: 0px;
+}
+
+:global(html[data-explorer="auto-hide"]) .shell {
+  --explorer-track: 30px;
+}
+
+:global(html[data-explorer="collapsed"]) .explorer,
+:global(html[data-explorer="floating"]) .explorer {
+  padding: 0;
+}
+
+:global(html[data-explorer="hidden"]) .explorer,
+:global(html[data-explorer="collapsed"]) .explorerPanel,
+:global(html[data-explorer="auto-hide"]) .explorerSplitter,
+:global(html[data-explorer="floating"]) .explorerSplitter {
+  display: none;
+}
+
+:global(html[data-explorer="auto-hide"]) .explorerTab {
+  position: relative;
+  z-index: 16;
+  display: flex;
+  align-self: flex-start;
+  padding: 10px 2px;
+  border: 1px solid var(--border);
+  background: var(--bg-tabstrip);
+  color: var(--text-muted);
+  font: inherit;
+  writing-mode: vertical-rl;
+  cursor: default;
+  user-select: none;
+}
+
+:global(html[data-explorer="auto-hide"]) .explorerTab:hover,
+:global(html[data-explorer="auto-hide"]) .explorerTab[aria-expanded="true"] {
+  color: var(--text);
+}
+
+:global(html[data-explorer="auto-hide"]) .explorerPanel {
+  position: absolute;
+  z-index: 15;
+  inset-block: 0 6px;
+  inset-inline-start: 30px;
+  width: var(--explorer-width, 300px);
+  box-shadow: 4px 0 16px color-mix(in srgb, var(--bg-window) 80%, transparent);
+  transform: translateX(calc(-100% - 30px));
+  visibility: hidden;
+  transition:
+    transform 150ms ease-out,
+    visibility 0s linear 150ms;
+}
+
+:global(html[data-explorer="auto-hide"]) .explorer[data-peek] .explorerPanel {
+  transform: none;
+  visibility: visible;
+  transition:
+    transform 150ms ease-out,
+    visibility 0s;
+}
+
+:global(html[data-explorer="floating"]) .explorerPanel {
+  position: fixed;
+  z-index: 17;
+  inset-inline-start: var(--explorer-float-x);
+  inset-block-start: var(--explorer-float-y);
+  width: var(--explorer-float-width);
+  height: var(--explorer-float-height);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-window) 80%, transparent);
+}
+
+:global(html[data-explorer="floating"]) .floatingResizer {
+  position: absolute;
+  z-index: 2;
+  inset-inline-end: 0;
+  inset-block-end: 0;
+  display: block;
+  width: 14px;
+  height: 14px;
+  background: linear-gradient(
+    135deg,
+    transparent 55%,
+    var(--text-disabled) 55% 62%,
+    transparent 62% 75%,
+    var(--text-disabled) 75% 82%,
+    transparent 82%
+  );
+  cursor: nwse-resize;
+  touch-action: none;
+}
+
 @media (min-width: 1100px) {
   .shell {
-    grid-template-columns: minmax(240px, 300px) minmax(0, 1fr) auto;
+    --cheatsheet-track: var(--cheatsheet-width, 270px);
+
+    grid-template-columns: var(--explorer-track) minmax(0, 1fr) var(
+        --cheatsheet-track
+      );
     grid-template-areas:
       "chrome chrome chrome"
       "explorer workspace guide"
@@ -143,11 +264,32 @@
   }
 
   .guide {
+    position: relative;
     grid-area: guide;
     display: flex;
+    min-width: 0;
     min-height: 0;
     padding-inline-end: 6px;
     padding-block-end: 6px;
+  }
+
+  :global(html[data-cheatsheet="collapsed"]) .shell,
+  :global(html[data-cheatsheet="floating"]) .shell,
+  :global(html[data-cheatsheet="hidden"]) .shell {
+    --cheatsheet-track: 0px;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .shell {
+    --cheatsheet-track: 30px;
+  }
+
+  :global(html[data-cheatsheet="collapsed"]) .guide,
+  :global(html[data-cheatsheet="floating"]) .guide {
+    padding: 0;
+  }
+
+  :global(html[data-cheatsheet="hidden"]) .guide {
+    display: none;
   }
 }
 
@@ -155,6 +297,7 @@
   :global(html[data-connection="pending"]) .shell {
     height: 100dvh;
     overflow: hidden;
+    overflow: clip;
   }
 
   .shell {
@@ -186,6 +329,30 @@
       visibility 0s linear 150ms;
   }
 
+  :global(html[data-explorer]) .explorer {
+    display: flex;
+    padding: 0;
+  }
+
+  .explorerTab,
+  :global(html[data-explorer]) .explorerTab,
+  :global(html[data-explorer]) .floatingResizer {
+    display: none;
+  }
+
+  :global(html[data-explorer]) .explorerPanel {
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    display: flex;
+    width: auto;
+    height: auto;
+    box-shadow: none;
+    transform: none;
+    visibility: inherit;
+    transition: none;
+  }
+
   .explorer[data-open="true"] {
     transform: none;
     visibility: visible;
@@ -195,18 +362,20 @@
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .explorer,
-  .explorer[data-open="true"] {
-    transition: none;
-  }
+:global(html[data-motion="reduce"]) .explorer,
+:global(html[data-motion="reduce"]) .explorer[data-open="true"],
+:global(html[data-motion="reduce"][data-explorer="auto-hide"]) .explorerPanel,
+:global(html[data-motion="reduce"][data-explorer="auto-hide"])
+  .explorer[data-peek]
+  .explorerPanel {
+  transition: none;
+}
 
-  .shell[data-traveling] {
-    animation: none;
-    opacity: 0;
-  }
+:global(html[data-motion="reduce"]) .shell[data-traveling] {
+  animation: none;
+  opacity: 0;
+}
 
-  .shell[data-regenerating]::after {
-    animation: none;
-  }
+:global(html[data-motion="reduce"]) .shell[data-regenerating]::after {
+  animation: none;
 }

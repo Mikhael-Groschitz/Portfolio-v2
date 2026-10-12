@@ -1,4 +1,11 @@
-export type SessionFlag = "tour-seen" | "tables-explored";
+import {
+  readStorage,
+  removeStorage,
+  writeStorage,
+} from "@/components/browser-storage";
+
+export type SessionFlag =
+  "tour-seen" | "workspace-started" | "cheatsheet-placed";
 
 const remembered = new Set<SessionFlag>();
 const listeners = new Set<() => void>();
@@ -10,23 +17,7 @@ export function readFlag(
   if (remembered.has(flag)) {
     return true;
   }
-  try {
-    return (storage ?? window.sessionStorage).getItem(flag) === "1";
-  } catch {
-    return false;
-  }
-}
-
-function persist(
-  flag: SessionFlag,
-  storage?: Pick<Storage, "setItem">,
-): boolean {
-  try {
-    (storage ?? window.sessionStorage).setItem(flag, "1");
-    return true;
-  } catch {
-    return false;
-  }
+  return readStorage("session", flag, storage) === "1";
 }
 
 export function setFlag(
@@ -34,11 +25,23 @@ export function setFlag(
   storage?: Pick<Storage, "setItem">,
 ): boolean {
   remembered.add(flag);
-  const persisted = persist(flag, storage);
+  const persisted = writeStorage("session", flag, "1", storage);
   for (const listener of listeners) {
     listener();
   }
   return persisted;
+}
+
+export function clearFlag(
+  flag: SessionFlag,
+  storage?: Pick<Storage, "removeItem">,
+): boolean {
+  remembered.delete(flag);
+  const forgotten = removeStorage("session", flag, storage);
+  for (const listener of listeners) {
+    listener();
+  }
+  return forgotten;
 }
 
 export function subscribeToFlags(listener: () => void): () => void {

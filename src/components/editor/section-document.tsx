@@ -1,6 +1,6 @@
-import { LocaleBlocks } from "@/components/locale/locale-blocks";
+import { LocaleBlocks } from "@/components/locale/locale-text";
+import { documentTabId } from "@/components/shell/element-ids";
 import type { SectionId } from "@/content/types";
-import { documentTabId } from "./document-ids";
 import type { CodeToken } from "./highlight";
 import { scriptLines } from "./section-scripts";
 import styles from "./editor.module.css";

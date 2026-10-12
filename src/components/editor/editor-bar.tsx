@@ -1,36 +1,70 @@
 "use client";
 
-import { useSyncExternalStore } from "react";
-import { CaretDownIcon, CheckCircleIcon } from "@/components/icons";
+import { useId, useSyncExternalStore } from "react";
+import { CheckCircleIcon } from "@/components/icons";
 import { LocaleText } from "@/components/locale/locale-text";
+import {
+  ZOOM_LEVELS,
+  isZoom,
+} from "@/components/preferences/preferences-runtime";
+import {
+  readPreferences,
+  savePreferences,
+  usePreferences,
+} from "@/components/preferences/preferences-store";
 import { isQueryDocument } from "@/components/shell/section-routes";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { type Localized, mapLocalized } from "@/content/locales";
 import type { ShellText } from "@/content/types";
-import { cursorOf } from "./query-store";
+import { createQueryStore, cursorOf } from "./query-store";
 import styles from "./editor.module.css";
 
-const START = { line: 1, column: 1 };
+const READ_ONLY = createQueryStore();
 
 export function EditorBar({
   text,
 }: Readonly<{ text: Localized<ShellText["editor"]> }>) {
-  const { activeDocument, query } = useWorkspace();
+  const { activeDocument, queryStore } = useWorkspace();
+  const store =
+    activeDocument !== null && isQueryDocument(activeDocument)
+      ? queryStore(activeDocument)
+      : READ_ONLY;
   const snapshot = useSyncExternalStore(
-    query.subscribe,
-    query.getSnapshot,
-    query.getSnapshot,
+    store.subscribe,
+    store.getSnapshot,
+    store.getSnapshot,
   );
-  const cursor = isQueryDocument(activeDocument)
-    ? cursorOf(snapshot.text, snapshot.selectionEnd)
-    : START;
+  const { zoom } = usePreferences();
+  const zoomId = useId();
+  if (activeDocument === null) {
+    return null;
+  }
+  const cursor = cursorOf(snapshot.text, snapshot.selectionEnd);
 
   return (
-    <div className={styles.editorBar}>
-      <span className={styles.zoom} aria-hidden="true">
-        100 %
-        <CaretDownIcon size={14} />
-      </span>
+    <div className={styles.editorBar} data-editor-bar="">
+      <label htmlFor={zoomId} className="visually-hidden">
+        <LocaleText text={mapLocalized(text, (editor) => editor.zoom)} />
+      </label>
+      <select
+        id={zoomId}
+        className={styles.zoom}
+        value={zoom}
+        data-tip=""
+        data-zoom=""
+        onChange={(event) => {
+          const next = Number(event.currentTarget.value);
+          if (isZoom(next)) {
+            savePreferences({ ...readPreferences(), zoom: next });
+          }
+        }}
+      >
+        {ZOOM_LEVELS.map((level) => (
+          <option key={level} value={level}>
+            {`${level} %`}
+          </option>
+        ))}
+      </select>
       <span className={styles.issues}>
         <CheckCircleIcon size={14} />
         <LocaleText text={mapLocalized(text, (editor) => editor.noIssues)} />

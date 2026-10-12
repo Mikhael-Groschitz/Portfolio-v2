@@ -1,41 +1,54 @@
-import { SECTION_IDS, type SectionId, isSectionId } from "@/content/types";
+import { catalogObject } from "@/engine/catalog";
+import { type SectionId, isSectionId } from "@/content/types";
 
-export const HOME_SECTION = "about" satisfies SectionId;
+export const QUERY_ROUTE = "query";
 
-export const QUERY_DOCUMENT = "query";
+const QUERY_PREFIX = "query-";
 
-export type DocumentId = SectionId | typeof QUERY_DOCUMENT;
+export type QueryDocumentId = `${typeof QUERY_PREFIX}${number}`;
 
-export const DOCUMENT_IDS: readonly DocumentId[] = [
-  ...SECTION_IDS,
-  QUERY_DOCUMENT,
-];
+export type DocumentId = SectionId | QueryDocumentId;
 
-export function byDocument<T>(
-  pick: (document: DocumentId) => T,
-): Record<DocumentId, T> {
-  return Object.fromEntries(
-    DOCUMENT_IDS.map((document) => [document, pick(document)]),
-  ) as Record<DocumentId, T>;
-}
+export type Route = SectionId | typeof QUERY_ROUTE | null;
 
-export function isDocumentId(value: unknown): value is DocumentId {
-  return value === QUERY_DOCUMENT || isSectionId(value);
+export function queryDocument(number: number): QueryDocumentId {
+  return `${QUERY_PREFIX}${number}`;
 }
 
 export function isQueryDocument(
   document: DocumentId,
-): document is typeof QUERY_DOCUMENT {
-  return document === QUERY_DOCUMENT;
+): document is QueryDocumentId {
+  return document.startsWith(QUERY_PREFIX);
+}
+
+export function queryNumber(document: QueryDocumentId): number {
+  return Number(document.slice(QUERY_PREFIX.length));
+}
+
+export function queryFileName(document: QueryDocumentId): string {
+  return `SQLQuery${queryNumber(document)}.sql`;
+}
+
+export function documentFileName(document: DocumentId): string {
+  return isQueryDocument(document)
+    ? queryFileName(document)
+    : `${catalogObject(document).name}.sql`;
+}
+
+export function isDocumentId(value: unknown): value is DocumentId {
+  return (
+    isSectionId(value) ||
+    (typeof value === "string" && /^query-[1-9]\d*$/.test(value))
+  );
 }
 
 export function documentPath(document: DocumentId): string {
-  return `/${document}`;
+  return `/${isQueryDocument(document) ? QUERY_ROUTE : document}`;
 }
 
-export function documentFromSegment(segment: string | null): DocumentId {
-  if (segment === QUERY_DOCUMENT) {
-    return QUERY_DOCUMENT;
+export function routeFromSegment(segment: string | null): Route {
+  if (segment === QUERY_ROUTE) {
+    return QUERY_ROUTE;
   }
-  return isSectionId(segment) ? segment : HOME_SECTION;
+  return isSectionId(segment) ? segment : null;
 }

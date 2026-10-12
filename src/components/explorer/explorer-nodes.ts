@@ -1,3 +1,4 @@
+import { documentPath } from "@/components/shell/section-routes";
 import { localize } from "@/content";
 import { type Localized, mapLocalized } from "@/content/locales";
 import { byProfile } from "@/content/profiles";
@@ -15,6 +16,7 @@ function objectNodes(kind: CatalogObjectKind): TreeNode[] {
     id: object.section,
     label: qualifiedName(object),
     icon: kind,
+    href: documentPath(object.section),
   }));
 }
 

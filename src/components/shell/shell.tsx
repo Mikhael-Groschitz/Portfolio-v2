@@ -24,13 +24,24 @@ export function Shell({ children }: Readonly<{ children: ReactNode }>) {
             titleBar={<TitleBar />}
             toolbar={<Toolbar />}
             explorer={<ObjectExplorer />}
+            explorerLabels={localize((texts) => ({
+              title: texts.shell.explorer.title,
+              resize: texts.shell.explorer.resize,
+            }))}
             workspace={<Workspace>{children}</Workspace>}
             guide={
               <CheatsheetPanel
                 text={localize((texts) => texts.shell.cheatsheet)}
+                windowText={localize((texts) => ({
+                  ...texts.shell.window,
+                  move: texts.shell.cheatsheet.move,
+                  close: texts.shell.cheatsheet.close,
+                }))}
               />
             }
-            statusBar={<StatusBar />}
+            statusBar={
+              <StatusBar text={localize((texts) => texts.shell.status)} />
+            }
             tour={<Tour text={localize((texts) => texts.shell.tour)} />}
             dialog={
               <ConnectDialog
@@ -42,6 +53,9 @@ export function Shell({ children }: Readonly<{ children: ReactNode }>) {
               <>
                 <TimeTravelOverlay
                   text={localize((texts) => texts.shell.connection.traveling)}
+                  arrivalText={localize(
+                    (texts) => texts.shell.results.returned,
+                  )}
                 />
                 <GameOverlay text={localize((texts) => texts.shell.game)} />
               </>

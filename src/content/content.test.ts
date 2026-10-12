@@ -1,14 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { getTable, getTexts } from ".";
+import {
+  formatCompletionTime,
+  formatCount,
+  formatDuration,
+  formatElapsed,
+  formatYearMonth,
+} from "./format";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "./locales";
-import { isPlaceholder } from "./placeholder";
 import { SECTION_IDS } from "./types";
 
 const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const WEB_URL = /^https?:\/\/\S+$/;
 const CONTACT_URL = /^(https?:\/\/|mailto:|tel:)\S+$/;
 const LOCAL_PDF = /^\/\S+\.pdf$/;
-const PROJECT_IMAGE = /^\/projects\/[\w.-]+\.(svg|png|jpe?g|webp)$/;
 
 const otherLocales = LOCALES.filter((locale) => locale !== DEFAULT_LOCALE);
 
@@ -46,19 +51,14 @@ function sharedFacts(locale: Locale) {
       startDate,
       endDate,
     })),
-    projects: texts.projects.map(({ stack, repoUrl, demoUrl, image }) => ({
+    projects: texts.projects.map(({ stack, repoUrl, demoUrl }) => ({
       stack,
       repoUrl,
       demoUrl,
-      image,
     })),
     traits: texts.beyondTheTerminal.map(({ trait }) => trait),
     contact: texts.contact.channels.map(({ value, url }) => ({ value, url })),
   };
-}
-
-function matchesOrPlaceholder(value: string, pattern: RegExp): boolean {
-  return isPlaceholder(value) || pattern.test(value);
 }
 
 describe("texts", () => {
@@ -86,42 +86,29 @@ describe("texts", () => {
 
   it("uses year-month dates that start before they end", () => {
     for (const job of getTexts().career) {
-      expect(matchesOrPlaceholder(job.startDate, YEAR_MONTH), job.company).toBe(
-        true,
-      );
+      expect(YEAR_MONTH.test(job.startDate), job.company).toBe(true);
       if (job.endDate === null) {
         continue;
       }
-      expect(matchesOrPlaceholder(job.endDate, YEAR_MONTH), job.company).toBe(
-        true,
-      );
-      if (!isPlaceholder(job.startDate) && !isPlaceholder(job.endDate)) {
-        expect(job.startDate <= job.endDate, job.company).toBe(true);
-      }
+      expect(YEAR_MONTH.test(job.endDate), job.company).toBe(true);
+      expect(job.startDate <= job.endDate, job.company).toBe(true);
     }
   });
 
-  it("uses valid links and image paths", () => {
+  it("uses valid links", () => {
     for (const locale of LOCALES) {
       const texts = getTexts(locale);
       for (const project of texts.projects) {
         for (const url of [project.repoUrl, project.demoUrl]) {
           if (url !== null) {
-            expect(matchesOrPlaceholder(url, WEB_URL), project.name).toBe(true);
+            expect(WEB_URL.test(url), project.name).toBe(true);
           }
-        }
-        if (project.image !== null) {
-          expect(project.image).toMatch(PROJECT_IMAGE);
         }
       }
       for (const item of texts.contact.channels) {
-        expect(matchesOrPlaceholder(item.url, CONTACT_URL), item.value).toBe(
-          true,
-        );
+        expect(CONTACT_URL.test(item.url), item.value).toBe(true);
       }
-      expect(matchesOrPlaceholder(texts.resume.url, LOCAL_PDF), locale).toBe(
-        true,
-      );
+      expect(LOCAL_PDF.test(texts.resume.url), locale).toBe(true);
     }
   });
 });
@@ -135,9 +122,7 @@ describe("getTable", () => {
 
   it("lists the career from the newest job to the oldest", () => {
     for (const locale of LOCALES) {
-      const dates = getTable("career", locale)
-        .map((job) => job.startDate)
-        .filter((date) => !isPlaceholder(date));
+      const dates = getTable("career", locale).map((job) => job.startDate);
       expect(dates).toEqual([...dates].sort().reverse());
     }
   });
@@ -165,5 +150,63 @@ describe("getTable", () => {
       const channels = getTable("contact", locale).map((item) => item.channel);
       expect(new Set(channels).size).toBe(channels.length);
     }
+  });
+});
+
+describe("formatYearMonth", () => {
+  it("formats in each language without shifting the month", () => {
+    expect(formatYearMonth("2023-03", "en")).toBe("Mar 2023");
+    expect(formatYearMonth("2024-12", "en")).toBe("Dec 2024");
+    expect(formatYearMonth("2023-03", "pt-BR")).toBe("mar. de 2023");
+    expect(formatYearMonth("2024-01", "pt-BR")).toBe("jan. de 2024");
+  });
+});
+
+describe("formatCount", () => {
+  const rows = {
+    one: "({count} row affected)",
+    other: "({count} rows affected)",
+  };
+
+  it("uses the singular only for exactly one", () => {
+    expect(formatCount(rows, 1)).toBe("(1 row affected)");
+    expect(formatCount(rows, 0)).toBe("(0 rows affected)");
+    expect(formatCount(rows, 12)).toBe("(12 rows affected)");
+  });
+});
+
+describe("formatCompletionTime", () => {
+  const moment = new Date(Date.UTC(2026, 9, 6, 13, 23, 38, 830));
+
+  it("writes the local time with seven fraction digits, like SSMS", () => {
+    expect(formatCompletionTime(moment, -180)).toBe(
+      "2026-10-06T10:23:38.8300000-03:00",
+    );
+  });
+
+  it("handles positive and partial-hour offsets", () => {
+    expect(formatCompletionTime(moment, 330)).toBe(
+      "2026-10-06T18:53:38.8300000+05:30",
+    );
+    expect(formatCompletionTime(moment, 0)).toBe(
+      "2026-10-06T13:23:38.8300000+00:00",
+    );
+  });
+});
+
+describe("formatElapsed", () => {
+  it("shows hours, minutes and seconds", () => {
+    expect(formatElapsed(120)).toBe("00:00:00");
+    expect(formatElapsed(61_500)).toBe("00:01:01");
+    expect(formatElapsed(3_723_000)).toBe("01:02:03");
+  });
+});
+
+describe("formatDuration", () => {
+  it("adds the milliseconds to the elapsed time", () => {
+    expect(formatDuration(0)).toBe("00:00:00.000");
+    expect(formatDuration(62.4)).toBe("00:00:00.062");
+    expect(formatDuration(61_500)).toBe("00:01:01.500");
+    expect(formatDuration(-5)).toBe("00:00:00.000");
   });
 });

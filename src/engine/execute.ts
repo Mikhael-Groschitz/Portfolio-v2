@@ -1,13 +1,12 @@
 import { getTable, getTexts } from "@/content";
 import type { Locale } from "@/content/locales";
-import { isPlaceholder } from "@/content/placeholder";
 import {
   CATALOG,
   type CatalogColumn,
   type CatalogColumnType,
   type CatalogObject,
-  type CatalogObjectKind,
   DATABASE,
+  OBJECT_TYPES,
   SCHEMA,
   objectReferences,
   qualifiedName,
@@ -27,6 +26,7 @@ import {
   splitStatements,
 } from "./normalize";
 import { sectionQuery } from "./scripts";
+import { helpForStatement, isObjectHelp } from "./sp-help";
 
 export const MAX_QUERY_LENGTH = 10_000;
 
@@ -35,7 +35,7 @@ export type Cell =
   | { kind: "link"; text: string; href: string; download?: string }
   | { kind: "null" };
 
-export interface ResultColumn {
+interface ResultColumn {
   name: string;
   type: CatalogColumnType;
 }
@@ -46,7 +46,7 @@ export interface ResultSet {
   rows: readonly (readonly Cell[])[];
 }
 
-export interface SqlError {
+interface SqlError {
   number: number;
   level: number;
   state: number;
@@ -54,8 +54,12 @@ export interface SqlError {
   message: string;
 }
 
-export type StatementResult =
-  { kind: "rows"; resultSet: ResultSet } | { kind: "done" };
+export type StatementOutput =
+  | { kind: "rows"; resultSet: ResultSet }
+  | { kind: "done" }
+  | { kind: "info"; text: string };
+
+export type StatementResult = StatementOutput & { statement: number };
 
 export type ExecutionOutcome =
   | {
@@ -73,12 +77,7 @@ export interface ExecutionContext {
   v1Available?: boolean;
 }
 
-type Command = (locale: Locale) => StatementResult[];
-
-const OBJECT_TYPES: Record<CatalogObjectKind, string> = {
-  table: "user table",
-  procedure: "stored procedure",
-};
+type Command = (locale: Locale) => StatementOutput[];
 
 const HELP_FORMS = [
   "HELP",
@@ -103,10 +102,10 @@ function cellOf(row: object, column: CatalogColumn): Cell {
     return { kind: "null" };
   }
   const text = Array.isArray(value) ? value.join(", ") : String(value);
-  if (column.type === "url" && !isPlaceholder(text)) {
+  if (column.type === "url") {
     return { kind: "link", text, href: text };
   }
-  if (column.type === "download" && !isPlaceholder(text)) {
+  if (column.type === "download") {
     const fileName = column.fileField && fieldValue(row, column.fileField);
     return {
       kind: "link",
@@ -129,7 +128,7 @@ function resultSetOf(object: CatalogObject, locale: Locale): ResultSet {
   };
 }
 
-function helpResults(locale: Locale): StatementResult[] {
+function helpResults(locale: Locale): StatementOutput[] {
   const descriptions = getTexts(locale).shell.query.help;
   const objects: ResultSet = {
     source: "sp_help",
@@ -157,6 +156,10 @@ function helpResults(locale: Locale): StatementResult[] {
       ]),
       [textCell(`USE ${DATABASE}`), textCell(descriptions.use)],
       [textCell("EXEC sp_help"), textCell(descriptions.spHelp)],
+      [
+        textCell(`EXEC sp_help '${qualifiedName(CATALOG[0])}'`),
+        textCell(descriptions.spHelpObject),
+      ],
       [textCell("HELP"), textCell(descriptions.help)],
     ],
   };
@@ -197,6 +200,13 @@ const COMMANDS = new Map<string, Command>([
   ...entries([`USE ${DATABASE}`], () => [{ kind: "done" }]),
   ...entries(HELP_FORMS, helpResults),
 ]);
+
+function stamped(
+  outputs: readonly StatementOutput[],
+  statement: number,
+): StatementResult[] {
+  return outputs.map((output) => ({ ...output, statement }));
+}
 
 function failure(
   statement: Statement,
@@ -241,7 +251,7 @@ export function execute(
   context: ExecutionContext,
 ): ExecutionOutcome {
   if (input.length > MAX_QUERY_LENGTH) {
-    return failure({ text: "", line: 1 }, context);
+    return failure({ text: "", line: 1, original: "" }, context);
   }
   const { locale, now, v1Available = false } = context;
   const easterEggContext: EasterEggContext = {
@@ -252,10 +262,29 @@ export function execute(
   };
   const results: StatementResult[] = [];
   let effect: Effect | undefined;
-  for (const statement of splitStatements(input)) {
+  for (const [index, statement] of splitStatements(input).entries()) {
     const command = COMMANDS.get(statement.text);
     if (command) {
-      results.push(...command(locale));
+      results.push(...stamped(command(locale), index));
+      continue;
+    }
+    if (isObjectHelp(statement.text)) {
+      const help = helpForStatement(statement, locale);
+      if (help.kind === "error") {
+        return {
+          kind: "error",
+          database: DATABASE,
+          error: {
+            number: help.code,
+            level: help.level,
+            state: help.state,
+            line: statement.line,
+            message: help.message,
+          },
+          hint: help.hint,
+        };
+      }
+      results.push(...stamped(help.results, index));
       continue;
     }
     const easterEgg = EASTER_EGGS.find((entry) => entry.match(statement.text));
@@ -266,7 +295,7 @@ export function execute(
     if (outcome.kind === "error") {
       return easterEggFailure(statement, outcome, locale);
     }
-    results.push(...outcome.results);
+    results.push(...stamped(outcome.results, index));
     effect = outcome.effect ?? effect;
     if (effect === "travel") {
       break;
@@ -294,4 +323,14 @@ export function rowCountOf(outcome: ExecutionOutcome): number {
     (total, resultSet) => total + resultSet.rows.length,
     0,
   );
+}
+
+export function parse(
+  input: string,
+  context: ExecutionContext,
+): ExecutionOutcome {
+  const outcome = execute(input, context);
+  return outcome.kind === "error"
+    ? outcome
+    : { kind: "results", database: DATABASE, results: [] };
 }

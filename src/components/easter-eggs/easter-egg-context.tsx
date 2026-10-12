@@ -11,18 +11,19 @@ import {
   useState,
 } from "react";
 import { readConnectionStatus } from "@/components/connect/connection-runtime";
-import { QUERY_DOCUMENT } from "@/components/shell/section-routes";
+import {
+  type QueryDocumentId,
+  isQueryDocument,
+} from "@/components/shell/section-routes";
+import { prefersReducedMotion } from "@/components/preferences/preferences-runtime";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { V1_DATABASE } from "@/engine/catalog";
 import { KONAMI_CODE, LETTERS_FROM, nextKonamiStep } from "./konami";
-import {
-  markDeparture,
-  prefersReducedMotion,
-  takeArrival,
-} from "./time-travel-runtime";
+import { startLanding } from "./landing-store";
+import { markDeparture, takeArrival } from "./time-travel-runtime";
 import { V1_URL } from "./v1-url";
 
-export const TRAVEL_COMMAND = `USE ${V1_DATABASE};`;
+const TRAVEL_COMMAND = `USE ${V1_DATABASE};`;
 
 const TYPING_INTERVAL_MS = 45;
 const DEPARTURE_MS = 2000;
@@ -42,8 +43,15 @@ const EasterEggContext = createContext<EasterEggValue | null>(null);
 export function EasterEggProvider({
   children,
 }: Readonly<{ children: ReactNode }>) {
-  const { activeDocument, effect, query, openQuery, runDocument, arrive } =
-    useWorkspace();
+  const {
+    activeDocument,
+    effect,
+    queryStore,
+    openQuery,
+    runDocument,
+    requestConnection,
+    arrive,
+  } = useWorkspace();
   const [landedId, setLandedId] = useState<number | null>(null);
   const [settledId, setSettledId] = useState<number | null>(null);
   const [closedGameId, setClosedGameId] = useState<number | null>(null);
@@ -97,61 +105,77 @@ export function EasterEggProvider({
     return () => window.clearTimeout(timer);
   }, [regenerating, effect]);
 
-  useEffect(() => {
-    if (takeArrival()) {
-      arrive();
+  const land = useCallback(() => {
+    arrive();
+    if (!prefersReducedMotion()) {
+      startLanding();
     }
   }, [arrive]);
+
+  useEffect(() => {
+    if (takeArrival()) {
+      land();
+    }
+  }, [land]);
 
   useEffect(() => {
     function landOnReturn(event: PageTransitionEvent) {
       if (event.persisted && traveling && effect) {
         takeArrival();
         setLandedId(effect.id);
-        arrive();
+        land();
       }
     }
     window.addEventListener("pageshow", landOnReturn);
     return () => window.removeEventListener("pageshow", landOnReturn);
-  }, [arrive, effect, traveling]);
+  }, [land, effect, traveling]);
 
-  const typeCommand = useCallback(() => {
-    typing.current = true;
-    const base = query.getSnapshot().text.trimEnd();
-    const prefix = base ? `${base}\n` : "";
-    const start = prefix.length;
-    const launch = () => {
-      query.update({
-        text: prefix + TRAVEL_COMMAND,
-        selectionStart: start,
-        selectionEnd: start + TRAVEL_COMMAND.length,
-      });
-      typing.current = false;
-      runDocument(QUERY_DOCUMENT);
-    };
-    if (prefersReducedMotion()) {
-      launch();
-      return;
-    }
-    const typeUpTo = (count: number) => {
-      const text = prefix + TRAVEL_COMMAND.slice(0, count);
-      query.update({
-        text,
-        selectionStart: text.length,
-        selectionEnd: text.length,
-      });
-      schedule(
-        count < TRAVEL_COMMAND.length ? () => typeUpTo(count + 1) : launch,
-        TYPING_INTERVAL_MS,
-      );
-    };
-    typeUpTo(0);
-  }, [query, runDocument, schedule]);
+  const typeCommand = useCallback(
+    (document: QueryDocumentId) => {
+      const query = queryStore(document);
+      typing.current = true;
+      query.requestFocus();
+      const base = query.getSnapshot().text.trimEnd();
+      const prefix = base ? `${base}\n` : "";
+      const start = prefix.length;
+      const launch = () => {
+        query.update({
+          text: prefix + TRAVEL_COMMAND,
+          selectionStart: start,
+          selectionEnd: start + TRAVEL_COMMAND.length,
+        });
+        typing.current = false;
+        runDocument(document);
+      };
+      if (prefersReducedMotion()) {
+        launch();
+        return;
+      }
+      const typeUpTo = (count: number) => {
+        const text = prefix + TRAVEL_COMMAND.slice(0, count);
+        query.update({
+          text,
+          selectionStart: text.length,
+          selectionEnd: text.length,
+        });
+        schedule(
+          count < TRAVEL_COMMAND.length ? () => typeUpTo(count + 1) : launch,
+          TYPING_INTERVAL_MS,
+        );
+      };
+      typeUpTo(0);
+    },
+    [queryStore, runDocument, schedule],
+  );
 
   useEffect(() => {
-    if (awaitingQuery.current && activeDocument === QUERY_DOCUMENT) {
+    if (
+      awaitingQuery.current &&
+      activeDocument !== null &&
+      isQueryDocument(activeDocument)
+    ) {
       awaitingQuery.current = false;
-      typeCommand();
+      typeCommand(activeDocument);
     }
   }, [activeDocument, typeCommand]);
 
@@ -159,13 +183,24 @@ export function EasterEggProvider({
     if (typing.current || awaitingQuery.current || traveling || playing) {
       return;
     }
-    openQuery();
-    if (activeDocument === QUERY_DOCUMENT) {
-      typeCommand();
+    if (readConnectionStatus() !== "connected") {
+      requestConnection();
+      return;
+    }
+    if (activeDocument !== null && isQueryDocument(activeDocument)) {
+      typeCommand(activeDocument);
     } else {
       awaitingQuery.current = true;
+      openQuery();
     }
-  }, [activeDocument, openQuery, traveling, playing, typeCommand]);
+  }, [
+    activeDocument,
+    openQuery,
+    requestConnection,
+    traveling,
+    playing,
+    typeCommand,
+  ]);
 
   useEffect(() => {
     if (traveling || playing) {

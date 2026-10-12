@@ -5,12 +5,7 @@ import {
   type Localized,
   mapLocalized,
 } from "./locales";
-import { isPlaceholder } from "./placeholder";
-import type { CareerDate, SectionId, Tables, Texts } from "./types";
-
-function chronologicalKey(date: CareerDate): string {
-  return isPlaceholder(date) ? "" : date;
-}
+import type { SectionId, Tables, Texts } from "./types";
 
 const readers: {
   [K in SectionId]: (localeTexts: Texts, locale: Locale) => Tables[K];
@@ -19,9 +14,7 @@ const readers: {
   "tech-stack": (localeTexts) => localeTexts.techStack,
   career: (localeTexts) =>
     [...localeTexts.career].sort((a, b) =>
-      chronologicalKey(b.startDate).localeCompare(
-        chronologicalKey(a.startDate),
-      ),
+      b.startDate.localeCompare(a.startDate),
     ),
   projects: (localeTexts) => localeTexts.projects,
   "beyond-the-terminal": (localeTexts) => localeTexts.beyondTheTerminal,

@@ -1,4 +1,10 @@
-.edgeTab {
+.frame {
+  display: contents;
+}
+
+.edgeTab,
+.floatingResizer,
+.frame > .windowSplitter {
   display: none;
 }
 
@@ -31,49 +37,32 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   min-height: 28px;
   padding-inline: 8px 4px;
 }
 
+.header [data-grip],
+.header [data-window-buttons] {
+  display: none;
+}
+
+.header [data-window-close] {
+  width: 28px;
+  height: 28px;
+  margin-inline-start: auto;
+}
+
 .title {
+  flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   color: var(--text);
   font-size: inherit;
   font-weight: normal;
+  text-overflow: ellipsis;
   white-space: nowrap;
-}
-
-.grip {
-  flex: 1;
-  height: 5px;
-  background-image: radial-gradient(var(--text-disabled) 1px, transparent 1px);
-  background-size: 4px 4px;
-}
-
-.headerIcons {
-  display: flex;
-  gap: 4px;
-  color: var(--icon);
-}
-
-.close {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border: 0;
-  border-radius: 2px;
-  background: transparent;
-  color: var(--icon);
-}
-
-.close:hover {
-  background: var(--bg-tab-active);
-}
-
-.close:focus-visible {
-  outline-offset: -2px;
 }
 
 .body {
@@ -138,6 +127,11 @@
   min-width: 0;
 }
 
+.itemNote {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
 .itemCode {
   color: var(--text-muted);
   font-family: var(--font-code);
@@ -147,32 +141,33 @@
 }
 
 @media (min-width: 1100px) {
-  .edgeTab {
-    align-self: flex-start;
-    padding: 10px 2px;
-    border: 1px solid var(--border);
-    background: var(--bg-tabstrip);
-    color: var(--text-muted);
-    font: inherit;
-    cursor: default;
+  .frame {
+    display: flex;
+    flex: 1;
+    min-width: 0;
+    min-height: 0;
   }
 
-  .edgeTab:hover {
-    color: var(--text);
+  .header [data-grip] {
+    display: block;
   }
 
-  .edgeLabel {
-    writing-mode: vertical-rl;
-  }
-
-  :global(html[data-cheatsheet="closed"]) .edgeTab {
+  .header [data-window-buttons] {
     display: flex;
   }
 
+  .header [data-window-close] {
+    width: 24px;
+    height: 24px;
+    margin-inline-start: 0;
+  }
+
   .panel {
-    position: static;
-    display: none;
-    width: 264px;
+    position: relative;
+    inset: auto;
+    z-index: auto;
+    flex: 1;
+    min-width: 0;
     max-height: none;
     border: 1px solid var(--border);
     border-block-start: 2px solid var(--accent);
@@ -181,14 +176,105 @@
     transition: none;
   }
 
-  :global(html:not([data-cheatsheet="closed"])) .panel {
+  .frame > .windowSplitter {
+    position: absolute;
+    z-index: 3;
+    inset-block: 0 6px;
+    inset-inline-start: -6px;
+    display: block;
+  }
+
+  :global(html[data-cheatsheet="collapsed"]) .panel {
+    display: none;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .frame > .windowSplitter,
+  :global(html[data-cheatsheet="floating"]) .frame > .windowSplitter {
+    display: none;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .edgeTab {
+    position: relative;
+    z-index: 16;
     display: flex;
+    align-self: flex-start;
+    padding: 10px 2px;
+    border: 1px solid var(--border);
+    background: var(--bg-tabstrip);
+    color: var(--text-muted);
+    font: inherit;
+    cursor: default;
+    user-select: none;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .edgeTab:hover,
+  :global(html[data-cheatsheet="auto-hide"]) .edgeTab[aria-expanded="true"] {
+    color: var(--text);
+  }
+
+  .edgeLabel {
+    writing-mode: vertical-rl;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .panel {
+    position: absolute;
+    z-index: 15;
+    inset-block: 0 6px;
+    inset-inline-end: 30px;
+    width: var(--cheatsheet-width, 270px);
+    box-shadow: -4px 0 16px
+      color-mix(in srgb, var(--bg-window) 80%, transparent);
+    transform: translateX(calc(100% + 30px));
+    visibility: hidden;
+    transition:
+      transform 150ms ease-out,
+      visibility 0s linear 150ms;
+  }
+
+  :global(html[data-cheatsheet="auto-hide"]) .frame[data-peek] .panel {
+    transform: none;
+    visibility: visible;
+    transition:
+      transform 150ms ease-out,
+      visibility 0s;
+  }
+
+  :global(html[data-cheatsheet="floating"]) .panel {
+    position: fixed;
+    z-index: 17;
+    inset-inline-start: var(--cheatsheet-float-x);
+    inset-block-start: var(--cheatsheet-float-y);
+    width: var(--cheatsheet-float-width);
+    height: var(--cheatsheet-float-height);
+    box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-window) 80%, transparent);
+  }
+
+  :global(html[data-cheatsheet="floating"]) .floatingResizer {
+    position: absolute;
+    z-index: 2;
+    inset-inline-end: 0;
+    inset-block-end: 0;
+    display: block;
+    width: 14px;
+    height: 14px;
+    background: linear-gradient(
+      135deg,
+      transparent 55%,
+      var(--text-disabled) 55% 62%,
+      transparent 62% 75%,
+      var(--text-disabled) 75% 82%,
+      transparent 82%
+    );
+    cursor: nwse-resize;
+    touch-action: none;
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .panel,
-  .panel[data-sheet-open="true"] {
-    transition: none;
-  }
+:global(html[data-motion="reduce"]) .panel,
+:global(html[data-motion="reduce"]) .panel[data-sheet-open="true"],
+:global(html[data-motion="reduce"][data-cheatsheet="auto-hide"]) .panel,
+:global(html[data-motion="reduce"][data-cheatsheet="auto-hide"])
+  .frame[data-peek]
+  .panel {
+  transition: none;
 }

@@ -1,0 +1,54 @@
+.splitter {
+  position: relative;
+  flex: none;
+  touch-action: none;
+  outline: none;
+}
+
+.splitter::after {
+  content: "";
+  position: absolute;
+  background: transparent;
+  transition: background-color 120ms ease-out;
+}
+
+.splitter[data-orientation="vertical"] {
+  width: 6px;
+  cursor: col-resize;
+}
+
+.splitter[data-orientation="vertical"]::after {
+  inset-block: 0;
+  inset-inline-start: 2px;
+  width: 2px;
+}
+
+.splitter[data-orientation="horizontal"] {
+  height: 6px;
+  cursor: row-resize;
+}
+
+.splitter[data-orientation="horizontal"]::after {
+  inset-inline: 0;
+  inset-block-start: 2px;
+  height: 2px;
+}
+
+.splitter:hover::after {
+  background: var(--border);
+}
+
+.splitter:focus-visible::after,
+.splitter:active::after {
+  background: var(--focus-ring);
+}
+
+:global(html[data-motion="reduce"]) .splitter::after {
+  transition: none;
+}
+
+@media (max-width: 767px) {
+  .splitter {
+    display: none;
+  }
+}

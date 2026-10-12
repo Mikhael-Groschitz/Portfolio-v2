@@ -5,6 +5,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { arrowTarget } from "@/components/interaction";
 import styles from "./connect-dialog.module.css";
 
 const OPTION_TABS = [
@@ -13,7 +14,7 @@ const OPTION_TABS = [
   "additionalParameters",
 ] as const;
 
-export type OptionsTab = (typeof OPTION_TABS)[number];
+type OptionsTab = (typeof OPTION_TABS)[number];
 
 interface ConnectOptionsProps {
   stacked: boolean;
@@ -51,15 +52,12 @@ export function ConnectOptions({
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = OPTION_TABS.indexOf(active);
-    const last = OPTION_TABS.length - 1;
-    const targets: Record<string, number> = {
-      ArrowRight: index === last ? 0 : index + 1,
-      ArrowLeft: index === 0 ? last : index - 1,
-      Home: 0,
-      End: last,
-    };
-    const target = targets[event.key];
+    const target = arrowTarget(
+      event.key,
+      OPTION_TABS.indexOf(active),
+      OPTION_TABS.length,
+      "horizontal",
+    );
     if (target === undefined) {
       return;
     }

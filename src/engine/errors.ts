@@ -9,9 +9,9 @@ export const FRANCHISES = [
   "dark-souls",
 ] as const;
 
-export type Franchise = (typeof FRANCHISES)[number];
+type Franchise = (typeof FRANCHISES)[number];
 
-export interface ErrorEntry {
+interface ErrorEntry {
   franchise: Franchise;
   code: number;
   text: Localized;

@@ -7,8 +7,6 @@ import { isSectionId } from "@/content/types";
 import { ExplorerTree } from "./explorer-tree";
 import type { TreeNode } from "./tree-model";
 
-const TABLES_FOLDER = "tables";
-
 interface ObjectExplorerTreeProps {
   nodes: readonly TreeNode[];
   labelledBy: string;
@@ -20,12 +18,12 @@ export function ObjectExplorerTree({
 }: Readonly<ObjectExplorerTreeProps>) {
   const { activeDocument, openSection } = useWorkspace();
   const { closeExplorer } = useShell();
-  const { pulse, tableOpened } = useGuide();
+  const { stepDone } = useGuide();
 
   function activate(id: string) {
     if (isSectionId(id)) {
       openSection(id);
-      tableOpened();
+      stepDone("tables");
       closeExplorer();
     }
   }
@@ -35,7 +33,6 @@ export function ObjectExplorerTree({
       nodes={nodes}
       labelledBy={labelledBy}
       selectedId={activeDocument}
-      highlightedId={pulse ? TABLES_FOLDER : undefined}
       onActivate={activate}
     />
   );

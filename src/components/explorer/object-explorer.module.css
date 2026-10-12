@@ -2,6 +2,7 @@
   display: flex;
   flex: 1;
   flex-direction: column;
+  min-width: 0;
   min-height: 0;
   border: 1px solid var(--border);
   border-block-start: 2px solid var(--accent);
@@ -12,51 +13,48 @@
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
   height: 28px;
   padding-inline: 8px 6px;
 }
 
 .title {
+  flex: 0 1 auto;
+  min-width: 0;
   margin: 0;
+  overflow: hidden;
   color: var(--text);
   font: inherit;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.grip {
-  flex: 1;
-  height: 5px;
-  background-image: radial-gradient(var(--text-disabled) 1px, transparent 1px);
-  background-size: 4px 4px;
-}
-
-.headerIcons {
-  display: flex;
-  gap: 4px;
-  color: var(--icon);
-}
-
-.closeButton {
-  display: none;
-}
-
-.toolbar {
+.connect,
+.toolButton {
   display: flex;
   align-items: center;
-  gap: 8px;
-  height: 28px;
-  padding-inline: 8px;
-  color: var(--icon);
-}
-
-.connect {
-  display: flex;
-  align-items: center;
-  margin-inline-end: 4px;
+  height: 22px;
+  padding: 0 4px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
   color: var(--text-menu);
+  font: inherit;
+  cursor: default;
 }
 
-.disabledIcon {
+.toolButton {
+  justify-content: center;
+  min-width: 24px;
+  color: var(--icon);
+}
+
+.connect:hover:not(:disabled),
+.toolButton:hover:not(:disabled) {
+  background: var(--bg-tab-active);
+}
+
+.toolButton:disabled {
   color: var(--text-disabled);
 }
 
@@ -67,7 +65,8 @@
   padding-block: 2px 8px;
 }
 
-:global(html[data-connection="pending"]) .treeScroll {
+:global(html[data-connection="pending"]) .treeScroll,
+:global(html[data-connection="disconnected"]) .treeScroll {
   visibility: hidden;
 }
 
@@ -80,6 +79,12 @@
 
 .item {
   outline: none;
+}
+
+a.item {
+  display: block;
+  color: inherit;
+  text-decoration: none;
 }
 
 .row {
@@ -112,24 +117,6 @@
   outline-color: var(--text-on-selection);
 }
 
-.item[data-highlight] > .row {
-  animation: highlight 1.6s ease-in-out infinite;
-}
-
-@keyframes highlight {
-  50% {
-    background: color-mix(in srgb, var(--accent) 22%, transparent);
-    box-shadow: inset 0 0 0 1px var(--accent);
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .item[data-highlight] > .row {
-    animation: none;
-    box-shadow: inset 0 0 0 1px var(--accent);
-  }
-}
-
 .expander {
   display: flex;
   flex: none;
@@ -156,24 +143,16 @@
     height: 44px;
   }
 
-  .headerIcons {
+  .header [data-grip],
+  .header [data-window-buttons] {
     display: none;
   }
 
-  .closeButton {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+  .header [data-window-close] {
     width: 36px;
     height: 36px;
-    border: 0;
+    margin-inline-start: auto;
     border-radius: 4px;
-    background: transparent;
-    color: var(--icon);
-  }
-
-  .closeButton:hover {
-    background: var(--bg-tab-active);
   }
 
   .row {

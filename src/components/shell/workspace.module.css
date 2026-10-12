@@ -13,6 +13,37 @@
   outline: none;
 }
 
+.noScript {
+  margin: 0;
+  padding: 6px 12px;
+  border-block-end: 1px solid var(--border);
+  background: var(--bg-panel);
+  color: var(--text);
+}
+
+.empty {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 24px 16px;
+  text-align: center;
+}
+
+.emptyTitle {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.emptyHint {
+  margin: 0;
+  color: var(--text-muted);
+}
+
 @media (max-width: 767px) {
   .document {
     border-inline: 0;

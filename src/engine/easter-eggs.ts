@@ -12,7 +12,7 @@ import {
   DATE_IN_THE_FUTURE,
   type FixedError,
 } from "./errors";
-import type { ExecutionOutcome, StatementResult } from "./execute";
+import type { ExecutionOutcome, StatementOutput } from "./execute";
 import type { QueryHint } from "./hints";
 import { normalizeStatement } from "./normalize";
 
@@ -23,14 +23,14 @@ export type Effect = "travel" | "regenerate" | "return" | "game";
 export interface EasterEggContext {
   now?: Date;
   v1Available: boolean;
-  run: (statement: string) => readonly StatementResult[];
+  run: (statement: string) => readonly StatementOutput[];
 }
 
 export type EasterEggOutcome =
-  | { kind: "results"; results: readonly StatementResult[]; effect?: Effect }
+  | { kind: "results"; results: readonly StatementOutput[]; effect?: Effect }
   | { kind: "error"; error: FixedError; hint: QueryHint };
 
-export interface EasterEgg {
+interface EasterEgg {
   match: (statement: string) => boolean;
   run: (statement: string, context: EasterEggContext) => EasterEggOutcome;
 }

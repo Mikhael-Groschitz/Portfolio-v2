@@ -8,23 +8,29 @@ import {
   useRef,
   useState,
 } from "react";
+import { useCommands } from "@/components/commands/command-context";
 import { CaretDownIcon, CloseIcon, PinIcon } from "@/components/icons";
+import { arrowTarget } from "@/components/interaction";
 import { LocaleText } from "@/components/locale/locale-text";
+import { MenuButton } from "@/components/menu/menu-button";
+import {
+  DOCUMENT_PANEL_ID,
+  documentTabId,
+} from "@/components/shell/element-ids";
 import {
   type DocumentId,
+  documentFileName,
   isDocumentId,
-  isQueryDocument,
 } from "@/components/shell/section-routes";
 import { useWorkspace } from "@/components/shell/workspace-context";
 import { neighborAfterClose } from "@/components/shell/workspace-state";
 import type { Localized } from "@/content/locales";
-import { catalogObject } from "@/engine/catalog";
-import { DOCUMENT_PANEL_ID, documentTabId } from "./document-ids";
 import styles from "./editor.module.css";
 
-interface DocumentTabsProps {
-  label: Localized;
-  queryName: Localized;
+const NEW_QUERY_SELECTOR = '[data-tour="new-query"]';
+
+function focusNewQueryButton() {
+  document.querySelector<HTMLElement>(NEW_QUERY_SELECTOR)?.focus();
 }
 
 function revealInStrip(tab: HTMLElement) {
@@ -41,61 +47,58 @@ function revealInStrip(tab: HTMLElement) {
   }
 }
 
-function TabName({
-  document,
-  queryName,
-}: Readonly<{ document: DocumentId; queryName: Localized }>) {
-  if (isQueryDocument(document)) {
-    return <LocaleText text={queryName} />;
-  }
-  return `${catalogObject(document).name}.sql`;
+interface DocumentTabsProps {
+  label: Localized;
+  openTabsLabel: Localized;
 }
 
 export function DocumentTabs({
   label,
-  queryName,
+  openTabsLabel,
 }: Readonly<DocumentTabsProps>) {
   const { tabs, activeDocument, activateDocument, closeDocument } =
     useWorkspace();
+  const commands = useCommands();
   const [focusedId, setFocusedId] = useState<DocumentId | null>(null);
   const tabRefs = useRef(new Map<DocumentId, HTMLButtonElement>());
   const labelId = useId();
-  const closable = tabs.length > 1;
   const tabStop =
-    focusedId !== null && tabs.includes(focusedId) ? focusedId : activeDocument;
+    focusedId !== null && tabs.includes(focusedId)
+      ? focusedId
+      : (activeDocument ?? tabs[0]);
 
   useEffect(() => {
+    if (activeDocument === null) {
+      return;
+    }
     const tab = tabRefs.current.get(activeDocument)?.parentElement;
     if (tab) {
       revealInStrip(tab);
     }
   }, [activeDocument]);
 
-  function focusTab(document: DocumentId | undefined) {
+  function focusTab(document: DocumentId | null | undefined) {
     if (document) {
       tabRefs.current.get(document)?.focus();
+    } else {
+      focusNewQueryButton();
     }
   }
 
   function handleKeyDown(event: KeyboardEvent<HTMLDivElement>) {
-    const index = tabs.indexOf(tabStop);
+    const target = arrowTarget(
+      event.key,
+      tabs.indexOf(tabStop),
+      tabs.length,
+      "horizontal",
+    );
+    if (target !== undefined) {
+      event.preventDefault();
+      focusTab(tabs[target]);
+      return;
+    }
     switch (event.key) {
-      case "ArrowRight":
-        focusTab(tabs[(index + 1) % tabs.length]);
-        break;
-      case "ArrowLeft":
-        focusTab(tabs[(index - 1 + tabs.length) % tabs.length]);
-        break;
-      case "Home":
-        focusTab(tabs[0]);
-        break;
-      case "End":
-        focusTab(tabs.at(-1));
-        break;
       case "Delete":
-        if (!closable) {
-          return;
-        }
         focusTab(neighborAfterClose(tabs, tabStop));
         closeDocument(tabStop);
         break;
@@ -116,6 +119,10 @@ export function DocumentTabs({
     if (!event.currentTarget.contains(event.relatedTarget)) {
       setFocusedId(null);
     }
+  }
+
+  if (tabs.length === 0) {
+    return null;
   }
 
   return (
@@ -155,32 +162,52 @@ export function DocumentTabs({
                 role="tab"
                 aria-selected={selected}
                 aria-controls={selected ? DOCUMENT_PANEL_ID : undefined}
-                aria-keyshortcuts={closable ? "Delete" : undefined}
+                aria-keyshortcuts="Delete"
                 tabIndex={document === tabStop ? 0 : -1}
                 data-document={document}
                 className={styles.tabButton}
                 onClick={() => activateDocument(document)}
               >
-                <TabName document={document} queryName={queryName} />
+                {documentFileName(document)}
               </button>
               <span className={styles.tabIcons} aria-hidden="true">
-                {selected && <PinIcon size={14} />}
-                {closable && (
+                {selected && (
                   <span
-                    className={styles.closeTab}
-                    onClick={() => closeDocument(document)}
+                    className={styles.pinTab}
+                    data-pin-tab=""
+                    data-tip-text={commands.label("pinTab")}
+                    onClick={() => commands.run("pinTab")}
                   >
-                    <CloseIcon size={14} />
+                    <PinIcon size={14} />
                   </span>
                 )}
+                <span
+                  className={styles.closeTab}
+                  onClick={() => closeDocument(document)}
+                >
+                  <CloseIcon size={14} />
+                </span>
               </span>
             </div>
           );
         })}
       </div>
-      <span className={styles.stripIcons} aria-hidden="true">
+      <MenuButton
+        label={<LocaleText text={openTabsLabel} />}
+        className={styles.stripMenu}
+        triggerData={{ "data-open-tabs": "" }}
+        items={() =>
+          tabs.map((document) => ({
+            key: document,
+            label: documentFileName(document),
+            role: "menuitemradio" as const,
+            checked: document === activeDocument,
+            onSelect: () => activateDocument(document),
+          }))
+        }
+      >
         <CaretDownIcon />
-      </span>
+      </MenuButton>
     </div>
   );
 }

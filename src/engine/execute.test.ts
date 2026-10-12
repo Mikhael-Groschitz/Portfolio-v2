@@ -7,6 +7,7 @@ import {
   type ExecutionOutcome,
   MAX_QUERY_LENGTH,
   execute,
+  parse,
   resultSetsOf,
   rowCountOf,
 } from "./execute";
@@ -138,7 +139,7 @@ describe("execute", () => {
     expect(execute("use portfolio", { locale: "pt-BR" })).toEqual({
       kind: "results",
       database: "Portfolio",
-      results: [{ kind: "done" }],
+      results: [{ kind: "done", statement: 0 }],
     });
   });
 
@@ -172,8 +173,24 @@ describe("execute", () => {
         kind: "text",
         text: "HELP",
       });
+      expect(commands.rows.map((row) => row[0])).toContainEqual({
+        kind: "text",
+        text: "EXEC sp_help 'dbo.About'",
+      });
     },
   );
+
+  it("numbers the results by the statement that produced them", () => {
+    const outcome = execute("USE Portfolio; SELECT * FROM dbo.About; HELP", {
+      locale: "en",
+    });
+    expect(outcome.kind === "results" && outcome.results).toEqual([
+      { kind: "done", statement: 0 },
+      expect.objectContaining({ kind: "rows", statement: 1 }),
+      expect.objectContaining({ kind: "rows", statement: 2 }),
+      expect.objectContaining({ kind: "rows", statement: 2 }),
+    ]);
+  });
 
   it("answers unknown commands with an error from the pool", () => {
     const outcome = execute("DROP TABLE dbo.About;", {
@@ -238,5 +255,34 @@ describe("execute", () => {
       kind: "error",
       error: { line: 1 },
     });
+  });
+});
+
+describe("parse", () => {
+  it("checks the script without running it", () => {
+    expect(
+      parse("SELECT * FROM dbo.About;\nEXEC sp_help", {
+        locale: "pt-BR",
+        random: first,
+      }),
+    ).toEqual({ kind: "results", database: "Portfolio", results: [] });
+  });
+
+  it("never sets off a secret while checking", () => {
+    for (const input of [
+      "USE Portfolio_v1",
+      "EXEC dbo.sp_Regenerate",
+      "SELECT * FROM dbo.About FOR SYSTEM_TIME AS OF '2020-01-01'",
+    ]) {
+      expect(
+        parse(input, { locale: "en", random: first, v1Available: true }),
+      ).toEqual({ kind: "results", database: "Portfolio", results: [] });
+    }
+  });
+
+  it("reports the same error the execution would", () => {
+    const options = { locale: "en", random: first } as const;
+    expect(parse("SELEC 1", options)).toEqual(execute("SELEC 1", options));
+    expect(parse("SELEC 1", options)).toMatchObject({ kind: "error" });
   });
 });

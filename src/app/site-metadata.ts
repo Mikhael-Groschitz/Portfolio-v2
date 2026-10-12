@@ -1,5 +1,4 @@
 import type { Metadata } from "next";
-import { HOME_SECTION } from "@/components/shell/section-routes";
 import { getTexts } from "@/content";
 import {
   DEFAULT_LOCALE,
@@ -12,15 +11,17 @@ import { SECTION_IDS, type SectionId, type Texts } from "@/content/types";
 
 export const SITE_URL = "https://mgroschitz.dev";
 
-export type SitePage = SectionId | "query" | "simple";
+export const HOME_PAGE = "home";
+
+export type SitePage = typeof HOME_PAGE | SectionId | "query";
 
 export const SITE_PAGES: readonly SitePage[] = [
+  HOME_PAGE,
   ...SECTION_IDS,
   "query",
-  "simple",
 ];
 
-export const INDEXED_PAGES: readonly SitePage[] = [...SECTION_IDS, "simple"];
+export const INDEXED_PAGES: readonly SitePage[] = [HOME_PAGE, ...SECTION_IDS];
 
 const OPEN_GRAPH_LOCALES: Record<Locale, string> = {
   "pt-BR": "pt_BR",
@@ -32,21 +33,17 @@ function withName(template: string, texts: Texts): string {
 }
 
 function pageLabel(
-  page: Exclude<SitePage, typeof HOME_SECTION>,
+  page: Exclude<SitePage, typeof HOME_PAGE>,
   texts: Texts,
 ): string {
-  if (page === "query") {
-    return texts.shell.query.editorLabel;
-  }
-  if (page === "simple") {
-    return texts.simpleVersion.title;
-  }
-  return texts.simpleVersion.sections[page];
+  return page === "query"
+    ? texts.shell.query.editorLabel
+    : texts.sections[page];
 }
 
 export function pageTitle(page: SitePage, texts: Texts): string {
   const { name, role } = texts.about;
-  if (page === HOME_SECTION) {
+  if (page === HOME_PAGE) {
     return `${name} | ${role}`;
   }
   return `${pageLabel(page, texts)} | ${name}`;
@@ -54,11 +51,8 @@ export function pageTitle(page: SitePage, texts: Texts): string {
 
 export function pageDescription(page: SitePage, texts: Texts): string {
   const { seo } = texts;
-  if (page === HOME_SECTION || page === "query") {
+  if (page === HOME_PAGE || page === "query") {
     return withName(seo.description, texts);
-  }
-  if (page === "simple") {
-    return withName(seo.simple, texts);
   }
   return withName(seo.sections[page], texts);
 }
@@ -67,12 +61,8 @@ export function imageAlt(texts: Texts): string {
   return withName(texts.seo.imageAlt, texts);
 }
 
-function routePath(page: SitePage): string {
-  return `/${page}`;
-}
-
 export function canonicalPath(page: SitePage): string {
-  return page === HOME_SECTION ? "/" : routePath(page);
+  return page === HOME_PAGE ? "/" : `/${page}`;
 }
 
 export function pageMetadata(page: SitePage): Metadata {
@@ -88,8 +78,8 @@ export function siteMetadata(): Metadata {
   const texts = getTexts(DEFAULT_LOCALE);
   return {
     metadataBase: new URL(SITE_URL),
-    title: pageTitle(HOME_SECTION, texts),
-    description: pageDescription(HOME_SECTION, texts),
+    title: pageTitle(HOME_PAGE, texts),
+    description: pageDescription(HOME_PAGE, texts),
     authors: [{ name: texts.about.name, url: SITE_URL }],
     openGraph: {
       type: "website",
@@ -104,10 +94,10 @@ export function siteMetadata(): Metadata {
 }
 
 export function pageTitlesByPath(): Record<string, Localized> {
-  const titleOf = (page: SitePage) =>
-    byLocale((locale) => pageTitle(page, getTexts(locale)));
-  return Object.fromEntries([
-    ["/", titleOf(HOME_SECTION)],
-    ...SITE_PAGES.map((page) => [routePath(page), titleOf(page)]),
-  ]);
+  return Object.fromEntries(
+    SITE_PAGES.map((page) => [
+      canonicalPath(page),
+      byLocale((locale) => pageTitle(page, getTexts(locale))),
+    ]),
+  );
 }

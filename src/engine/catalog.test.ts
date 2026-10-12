@@ -6,6 +6,7 @@ import {
   CATALOG,
   catalogIdentifiers,
   catalogObject,
+  findObject,
   qualifiedName,
 } from "./catalog";
 
@@ -44,5 +45,39 @@ describe("catalog", () => {
       expect(identifiers.has(name), name).toBe(true);
     }
     expect(identifiers.has("SELECT")).toBe(false);
+  });
+
+  it("allows NULL only in the columns that can be empty", () => {
+    for (const object of CATALOG) {
+      for (const locale of LOCALES) {
+        for (const row of getTable(object.section, locale)) {
+          for (const column of object.columns) {
+            const value = new Map(Object.entries(row)).get(column.field);
+            if (value === null) {
+              expect(column.nullable, `${object.name}.${column.name}`).toBe(
+                true,
+              );
+            }
+          }
+        }
+      }
+    }
+  });
+
+  it("builds every primary key from real columns", () => {
+    for (const object of CATALOG.filter((entry) => entry.kind === "table")) {
+      const names = object.columns.map((column) => column.name);
+      expect(object.primaryKey?.length, object.name).toBeGreaterThan(0);
+      for (const key of object.primaryKey ?? []) {
+        expect(names, object.name).toContain(key);
+      }
+    }
+  });
+
+  it("finds objects by any name a query may use", () => {
+    for (const reference of ["dbo.Career", "career", "Portfolio.dbo.CAREER"]) {
+      expect(findObject(reference)?.name).toBe("Career");
+    }
+    expect(findObject("dbo.Carrer")).toBeUndefined();
   });
 });

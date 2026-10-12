@@ -47,9 +47,18 @@ describe("splitStatements", () => {
     expect(
       splitStatements("-- one\n\nUSE Portfolio\nGO\n/* a\nb */ SELECT 1"),
     ).toEqual([
-      { text: "use portfolio", line: 3 },
-      { text: "select 1", line: 6 },
+      { text: "use portfolio", line: 3, original: "USE Portfolio" },
+      { text: "select 1", line: 6, original: "SELECT 1" },
     ]);
+  });
+
+  it("keeps the statement as typed, without comments", () => {
+    expect(
+      splitStatements("EXEC sp_help N'dbo.Career' -- estrutura")[0]?.original,
+    ).toBe("EXEC sp_help N'dbo.Career'");
+    expect(splitStatements("sp_help [dbo].[About];")[0]?.original).toBe(
+      "sp_help [dbo].[About]",
+    );
   });
 
   it("returns nothing for blank input or comments only", () => {

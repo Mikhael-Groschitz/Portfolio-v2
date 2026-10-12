@@ -3,6 +3,7 @@
 import {
   type FocusEvent,
   type KeyboardEvent,
+  type MouseEvent,
   type ReactNode,
   useMemo,
   useRef,
@@ -16,6 +17,7 @@ import {
   ServerIcon,
   TableIcon,
 } from "@/components/icons";
+import { isPlainClick } from "@/components/interaction";
 import { ProfileText } from "@/components/connect/profile-text";
 import { LocaleText } from "@/components/locale/locale-text";
 import {
@@ -54,8 +56,7 @@ function NodeLabel({ label }: Readonly<{ label: TreeLabel }>) {
 interface ExplorerTreeProps {
   nodes: readonly TreeNode[];
   labelledBy: string;
-  selectedId: string;
-  highlightedId?: string;
+  selectedId: string | null;
   onActivate: (id: string) => void;
 }
 
@@ -63,14 +64,13 @@ export function ExplorerTree({
   nodes,
   labelledBy,
   selectedId,
-  highlightedId,
   onActivate,
 }: Readonly<ExplorerTreeProps>) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(
     () => new Set(expandableIds(nodes)),
   );
   const [focusedId, setFocusedId] = useState<string | null>(null);
-  const itemRefs = useRef(new Map<string, HTMLLIElement>());
+  const itemRefs = useRef(new Map<string, HTMLElement>());
   const visible = useMemo(
     () => visibleNodes(nodes, expanded),
     [nodes, expanded],
@@ -130,23 +130,73 @@ export function ExplorerTree({
     }
   }
 
+  function keepRef(id: string) {
+    return (element: HTMLElement | null) => {
+      if (element) {
+        itemRefs.current.set(id, element);
+      }
+      return () => {
+        itemRefs.current.delete(id);
+      };
+    };
+  }
+
+  function rowOf(node: TreeNode, isOpen: boolean) {
+    return (
+      <>
+        <span className={styles.expander}>
+          {isExpandable(node) && <ExpanderIcon expanded={isOpen} />}
+        </span>
+        <span className={styles.nodeIcon}>{NODE_ICONS[node.icon]}</span>
+        <span className={styles.label}>
+          <NodeLabel label={node.label} />
+        </span>
+      </>
+    );
+  }
+
+  function indentOf(level: number) {
+    return { paddingInlineStart: (level - 1) * INDENT + 2 };
+  }
+
+  function openLink(event: MouseEvent, id: string) {
+    if (isPlainClick(event)) {
+      event.preventDefault();
+      onActivate(id);
+    }
+  }
+
   function renderNode(node: TreeNode, level: number): ReactNode {
     const expandable = isExpandable(node);
     const isOpen = expandable && expanded.has(node.id);
 
+    if (node.href && !expandable) {
+      return (
+        <li key={node.id} role="none">
+          <a
+            ref={keepRef(node.id)}
+            href={node.href}
+            data-node-id={node.id}
+            role="treeitem"
+            aria-level={level}
+            aria-selected={node.id === selectedId}
+            tabIndex={node.id === tabStopId ? 0 : -1}
+            className={styles.item}
+            onClick={(event) => openLink(event, node.id)}
+          >
+            <span className={styles.row} style={indentOf(level)}>
+              {rowOf(node, false)}
+            </span>
+          </a>
+        </li>
+      );
+    }
+
     return (
       <li
         key={node.id}
-        ref={(element) => {
-          if (element) {
-            itemRefs.current.set(node.id, element);
-          }
-          return () => {
-            itemRefs.current.delete(node.id);
-          };
-        }}
+        ref={keepRef(node.id)}
         data-node-id={node.id}
-        data-highlight={node.id === highlightedId || undefined}
         role="treeitem"
         aria-level={level}
         aria-expanded={expandable ? isOpen : undefined}
@@ -156,16 +206,10 @@ export function ExplorerTree({
       >
         <div
           className={styles.row}
-          style={{ paddingInlineStart: (level - 1) * INDENT + 2 }}
+          style={indentOf(level)}
           onClick={() => (expandable ? toggle(node.id) : onActivate(node.id))}
         >
-          <span className={styles.expander}>
-            {expandable && <ExpanderIcon expanded={isOpen} />}
-          </span>
-          <span className={styles.nodeIcon}>{NODE_ICONS[node.icon]}</span>
-          <span className={styles.label}>
-            <NodeLabel label={node.label} />
-          </span>
+          {rowOf(node, isOpen)}
         </div>
         {isOpen && (
           <ul role="group" className={styles.group}>

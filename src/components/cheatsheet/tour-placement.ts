@@ -1,13 +1,13 @@
-export type Placement = "right" | "below" | "above";
+export type Placement = "right" | "left" | "below" | "above";
 
-export interface TargetBox {
+interface TargetBox {
   top: number;
   left: number;
   right: number;
   bottom: number;
 }
 
-export interface Viewport {
+interface Viewport {
   width: number;
   height: number;
 }
@@ -50,6 +50,12 @@ export function placeCard(
   if (placement === "right") {
     const left = target.right + GAP;
     return left + width + MARGIN <= viewport.width
+      ? { top: Math.max(target.top, MARGIN), left }
+      : below(target, width, viewport);
+  }
+  if (placement === "left") {
+    const left = target.left - GAP - width;
+    return left >= MARGIN
       ? { top: Math.max(target.top, MARGIN), left }
       : below(target, width, viewport);
   }

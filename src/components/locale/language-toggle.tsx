@@ -20,6 +20,7 @@ export function LanguageToggle({
     <button
       type="button"
       className={className}
+      data-language-toggle=""
       onClick={() => setLocale(nextLocale(locale))}
     >
       {LOCALES.map((option) => (

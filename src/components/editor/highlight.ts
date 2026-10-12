@@ -8,7 +8,7 @@ export interface CodeToken {
   color?: string;
 }
 
-export type CodeLine = readonly CodeToken[];
+type CodeLine = readonly CodeToken[];
 
 const IDENTIFIER_COLOR = "var(--syntax-variable)";
 const OPERATOR_COLOR = "var(--syntax-operator)";
@@ -52,10 +52,7 @@ function pieceColor(
   return color;
 }
 
-export function retint(
-  line: CodeLine,
-  identifiers: ReadonlySet<string>,
-): CodeToken[] {
+function retint(line: CodeLine, identifiers: ReadonlySet<string>): CodeToken[] {
   return line.flatMap((token) => {
     if (token.color && LITERAL_COLORS.has(token.color)) {
       return [token];

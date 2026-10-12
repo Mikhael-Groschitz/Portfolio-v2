@@ -52,3 +52,27 @@ html[data-profile="dev"] [data-profile-block="visitor"] {
   border: 0;
   white-space: nowrap;
 }
+
+html[data-dragging="vertical"],
+html[data-dragging="vertical"] * {
+  cursor: col-resize;
+  user-select: none;
+}
+
+html[data-dragging="horizontal"],
+html[data-dragging="horizontal"] * {
+  cursor: row-resize;
+  user-select: none;
+}
+
+html[data-dragging="move"],
+html[data-dragging="move"] * {
+  cursor: move;
+  user-select: none;
+}
+
+html[data-dragging="corner"],
+html[data-dragging="corner"] * {
+  cursor: nwse-resize;
+  user-select: none;
+}

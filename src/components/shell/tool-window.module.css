@@ -1,0 +1,58 @@
+.grip {
+  position: relative;
+  flex: 1 1 0;
+  align-self: stretch;
+  min-width: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: move;
+  touch-action: none;
+}
+
+.grip::before {
+  content: "";
+  position: absolute;
+  inset-inline: 0;
+  inset-block-start: 50%;
+  height: 5px;
+  background-image: radial-gradient(var(--text-disabled) 1px, transparent 1px);
+  background-size: 4px 4px;
+  transform: translateY(-50%);
+}
+
+.grip:focus-visible {
+  outline: 1px solid var(--focus-ring);
+  outline-offset: -1px;
+}
+
+.buttons {
+  display: flex;
+  flex: none;
+  gap: 2px;
+}
+
+.button,
+.closeButton {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--icon);
+  cursor: default;
+}
+
+.button:hover,
+.closeButton:hover {
+  background: var(--bg-tab-active);
+}
+
+.button[aria-pressed="true"] > svg {
+  transform: rotate(90deg);
+}

@@ -27,6 +27,20 @@
   color: var(--text-on-time-travel);
 }
 
+.disconnected {
+  background: var(--status-ready);
+  color: var(--text);
+}
+
+.disconnected .tardis:focus-visible {
+  outline-color: var(--text);
+}
+
+:global(html[data-connection="pending"]) .connectionBar[data-standalone],
+:global(html[data-connection="disconnected"]) .connectionBar[data-standalone] {
+  display: none;
+}
+
 .tardis {
   display: flex;
   align-items: center;
@@ -55,13 +69,95 @@
   align-items: center;
   gap: 8px;
   height: 26px;
-  padding-inline: 10px;
+  padding-inline: 10px 4px;
   background: var(--status-ready);
   color: var(--text);
 }
 
+.statusText {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.repository {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+  margin-inline-start: auto;
+  padding-inline: 6px;
+  border-radius: 3px;
+  color: var(--text);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.repository > svg {
+  flex: none;
+}
+
+.repository:hover,
+.footerButton:hover,
+.footerButton[aria-expanded="true"] {
+  background: color-mix(in srgb, var(--text) 12%, transparent);
+}
+
+.repository:focus-visible,
+.footerButton:focus-visible {
+  outline-offset: -2px;
+}
+
+.footerButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--text);
+}
+
+.tips {
+  position: relative;
+  display: flex;
+}
+
+.tipsPanel {
+  position: absolute;
+  inset-inline-end: 0;
+  inset-block-end: calc(100% + 6px);
+  z-index: 45;
+  width: min(360px, calc(100vw - 16px));
+  padding: 10px 14px 12px;
+  border: 1px solid var(--border);
+  background: var(--bg-messages);
+  box-shadow: 0 8px 24px color-mix(in srgb, var(--bg-window) 80%, transparent);
+}
+
+.tipsTitle {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.tipsList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding-inline-start: 18px;
+  color: var(--text-menu);
+  line-height: 1.45;
+}
+
 @media (max-width: 767px) {
-  .detail {
+  .detail,
+  .repositoryLabel {
     display: none;
   }
 

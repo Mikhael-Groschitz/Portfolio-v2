@@ -2,6 +2,7 @@
 
 import { useEffect, useId, useRef, useState } from "react";
 import { useLanguage } from "@/components/locale/language-context";
+import { prefersReducedMotion } from "@/components/preferences/preferences-runtime";
 import { formatElapsed } from "@/content/format";
 import { QUERY_ENERGY, RAM, SUBWEAPONS } from "../balance";
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../core/camera";
@@ -142,8 +143,7 @@ export default function GameScreen({
       return;
     }
     const game = createGame(canvas, {
-      reducedMotion: window.matchMedia("(prefers-reduced-motion: reduce)")
-        .matches,
+      reducedMotion: prefersReducedMotion(),
       onHud: setHud,
       onExit: () => exitRef.current(),
     });
