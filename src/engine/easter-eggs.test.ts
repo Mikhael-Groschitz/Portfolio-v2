@@ -9,7 +9,7 @@ import {
 import { V2_LAUNCH_DATE, arrivalOutcome, parseSqlDate } from "./easter-eggs";
 import { type ExecutionContext, execute, resultSetsOf } from "./execute";
 
-const now = new Date("2026-10-09T12:00:00Z");
+const now = new Date("2026-10-15T12:00:00Z");
 const online: ExecutionContext = { locale: "en", now, v1Available: true };
 const offline: ExecutionContext = { locale: "en", now, v1Available: false };
 
@@ -64,7 +64,7 @@ describe("USE Portfolio_v1", () => {
 
 describe("FOR SYSTEM_TIME AS OF", () => {
   it("travels to version 1 for dates before the launch of version 2", () => {
-    for (const date of ["2025-01-01", "1963-11-23", "2026-10-05 23:59:59"]) {
+    for (const date of ["2025-01-01", "1963-11-23", "2026-10-11 23:59:59"]) {
       expect(execute(temporal(date), online), date).toMatchObject({
         effect: "travel",
         database: "Portfolio_v1",
@@ -73,7 +73,7 @@ describe("FOR SYSTEM_TIME AS OF", () => {
   });
 
   it("returns today's rows between the launch and now", () => {
-    for (const date of [V2_LAUNCH_DATE, "2026-10-08T08:30:00", "20261009"]) {
+    for (const date of [V2_LAUNCH_DATE, "2026-10-13T08:30:00", "20261014"]) {
       const outcome = execute(temporal(date), online);
       expect(outcome, date).toMatchObject({ kind: "results" });
       expect(outcome).not.toHaveProperty("effect");
@@ -86,7 +86,7 @@ describe("FOR SYSTEM_TIME AS OF", () => {
   it.each(["dbo.Projects", "Projects", "PORTFOLIO.DBO.PROJECTS"])(
     "works with any table, written as %j",
     (table) => {
-      const outcome = execute(temporal("2026-10-07", table), online);
+      const outcome = execute(temporal("2026-10-13", table), online);
       expect(resultSetsOf(outcome)[0]?.source).toBe("dbo.Projects");
     },
   );
