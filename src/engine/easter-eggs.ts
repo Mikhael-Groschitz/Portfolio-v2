@@ -16,7 +16,7 @@ import type { ExecutionOutcome, StatementOutput } from "./execute";
 import type { QueryHint } from "./hints";
 import { normalizeStatement } from "./normalize";
 
-export const V2_LAUNCH_DATE = "2026-10-06";
+export const V2_LAUNCH_DATE = "2026-10-12";
 
 export type Effect = "travel" | "regenerate" | "return" | "game";
 
