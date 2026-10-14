@@ -18,6 +18,10 @@
   padding-inline: 8px 6px;
 }
 
+.hint {
+  display: none;
+}
+
 .title {
   flex: 0 1 auto;
   min-width: 0;
@@ -141,6 +145,13 @@ a.item {
 
   .header {
     height: 44px;
+  }
+
+  .hint {
+    display: block;
+    margin: 0;
+    padding: 0 12px 8px;
+    color: var(--text-muted);
   }
 
   .header [data-grip],

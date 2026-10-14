@@ -1,4 +1,5 @@
 import { Fragment } from "react";
+import { useInput } from "@/components/shell/use-media-query";
 import type { ResultsText } from "@/content/types";
 import type { ExecutionOutcome } from "@/engine/execute";
 import { type RunTiming, messageBlocks } from "./messages";
@@ -15,7 +16,8 @@ export function MessagesPane({
   text,
   timing,
 }: Readonly<MessagesPaneProps>) {
-  const blocks = messageBlocks(outcome, text, timing);
+  const input = useInput();
+  const blocks = messageBlocks(outcome, text, timing, input);
 
   return (
     <pre className={styles.messages}>

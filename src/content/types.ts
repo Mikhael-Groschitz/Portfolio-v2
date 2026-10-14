@@ -16,6 +16,14 @@ export function isSectionId(value: unknown): value is SectionId {
   return SECTION_IDS.some((id) => id === value);
 }
 
+export const INPUTS = ["keyboard", "touch"] as const;
+
+export type Input = (typeof INPUTS)[number];
+
+export type ByInput<T> = Record<Input, T>;
+
+export type InputText = string | ByInput<string>;
+
 export type YearMonth = `${number}-${number}`;
 
 interface AboutRow {
@@ -172,7 +180,7 @@ interface ToastText {
   illustrative: string;
   shared: string;
   shareFailed: string;
-  clipboardBlocked: string;
+  clipboardBlocked: InputText;
   fullScreenBlocked: string;
 }
 
@@ -207,7 +215,7 @@ export interface StatusText {
   repositoryHint: string;
   notifications: string;
   tipsTitle: string;
-  tips: string[];
+  tips: ByInput<string[]>;
 }
 
 interface OptionsText {
@@ -258,7 +266,7 @@ export interface ResultsText {
   travelFarewell: string;
   returned: string;
   regenerated: string;
-  gameStarted: string;
+  gameStarted: InputText;
   opensInNewTab: string;
   resize: string;
   collapse: string;
@@ -282,14 +290,14 @@ export type CompletionKind = "keyword" | "table" | "procedure" | "database";
 
 export interface QueryText {
   editorLabel: string;
-  placeholder: string;
+  placeholder: InputText;
   suggestions: string;
   kinds: Record<CompletionKind, string>;
   help: {
     objects: Record<SectionId, string>;
     use: string;
     spHelp: string;
-    spHelpObject: string;
+    spHelpObject: InputText;
     help: string;
   };
 }
@@ -299,13 +307,13 @@ export interface CheatsheetText {
   close: string;
   move: string;
   resize: string;
-  intro: string;
+  intro: InputText;
   sectionsTitle: string;
   newQuery: { label: string; description: string };
   sections: Record<SectionId, string>;
   exploreTitle: string;
-  exploreIntro: string;
-  examples: { command: string; description: string }[];
+  exploreIntro: InputText;
+  examples: { command: string; description: InputText }[];
 }
 
 export type TourStepId = "query" | "tables" | "cheatsheet";
@@ -315,8 +323,9 @@ export interface TourText {
   skip: string;
   next: string;
   done: string;
-  steps: Record<TourStepId, { title: string; text: string }>;
+  steps: Record<TourStepId, { title: InputText; text: InputText }>;
   compactTablesText: string;
+  compactCheatsheetText: string;
   menuCheatsheetText: string;
 }
 
@@ -387,14 +396,14 @@ export interface ConnectText {
   };
   help: {
     title: string;
-    body: string[];
+    body: InputText[];
     close: string;
   };
 }
 
 export interface WindowText {
   menu: string;
-  moveHint: string;
+  moveHint: ByInput<string | null>;
   float: string;
   dock: string;
   autoHide: string;
@@ -421,6 +430,7 @@ export interface ShellText {
   window: WindowText;
   explorer: {
     title: string;
+    hint: string;
     connect: string;
     disconnect: string;
     close: string;
@@ -449,14 +459,14 @@ export interface ShellText {
   about: AboutText;
   find: FindText;
   workspace: {
-    start: string;
+    start: InputText;
     noScript: string;
   };
   notFound: {
     title: string;
     back: string;
   };
-  scripts: Record<SectionId, string[]>;
+  scripts: Record<SectionId, InputText[]>;
   results: ResultsText;
   query: QueryText;
   cheatsheet: CheatsheetText;

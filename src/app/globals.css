@@ -48,6 +48,18 @@ html[data-profile="dev"] [data-profile-block="visitor"] {
   white-space: nowrap;
 }
 
+@media (hover: none) and (pointer: coarse) {
+  [data-input="keyboard"] {
+    display: none;
+  }
+}
+
+@media not all and (hover: none) and (pointer: coarse) {
+  [data-input="touch"] {
+    display: none;
+  }
+}
+
 .not-found {
   display: flex;
   flex-direction: column;

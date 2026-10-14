@@ -1,11 +1,14 @@
 "use client";
 
 import { useEffect, useId, useRef, useState } from "react";
+import { InputAware } from "@/components/input-variants";
+import { useLanguage } from "@/components/locale/language-context";
 import { COMPACT_MEDIA_QUERY } from "@/components/shell/breakpoints";
 import { type WindowState, windowState } from "@/components/shell/layout-model";
 import { useShell } from "@/components/shell/shell-frame";
 import { useLayout } from "@/components/shell/use-layout";
 import { useMediaQuery } from "@/components/shell/use-media-query";
+import { getTexts, withLabels } from "@/content";
 import type { TourStepId, TourText } from "@/content/types";
 import { CHEATSHEET_ID, TOUR_STEPS, useGuide } from "./guide-context";
 import { type CardPosition, type Placement, placeCard } from "./tour-placement";
@@ -47,6 +50,9 @@ function layoutOf(step: TourStepId, surroundings: Surroundings): StepLayout {
           placement: compact ? "below" : "right",
         };
   }
+  if (compact) {
+    return { target: '[data-tour="cheatsheet-toggle"]', placement: "below" };
+  }
   if (cheatsheetInMenu(surroundings)) {
     return { target: '[data-tour="help-menu"]', placement: "below" };
   }
@@ -62,6 +68,9 @@ function layoutOf(step: TourStepId, surroundings: Surroundings): StepLayout {
 function bodyOf(step: TourStepId, text: TourText, surroundings: Surroundings) {
   if (step === "tables" && surroundings.compact && !surroundings.explorerOpen) {
     return text.compactTablesText;
+  }
+  if (step === "cheatsheet" && surroundings.compact) {
+    return text.compactCheatsheetText;
   }
   if (step === "cheatsheet" && cheatsheetInMenu(surroundings)) {
     return text.menuCheatsheetText;
@@ -83,6 +92,8 @@ function TourCard({
   surroundings,
 }: Readonly<TourCardProps>) {
   const { nextTourStep, finishTour } = useGuide();
+  const { locale } = useLanguage();
+  const labels = getTexts(locale).shell.commands;
   const [position, setPosition] = useState<CardPlacement | null>(null);
   const primaryRef = useRef<HTMLButtonElement>(null);
   const focused = useRef(false);
@@ -157,10 +168,10 @@ function TourCard({
           .replace("{total}", String(TOUR_STEPS.length))}
       </p>
       <h2 id={titleId} className={styles.title}>
-        {text.steps[step].title}
+        <InputAware text={withLabels(text.steps[step].title, labels)} />
       </h2>
       <p id={bodyId} className={styles.text}>
-        {body}
+        <InputAware text={withLabels(body, labels)} />
       </p>
       <div className={styles.actions}>
         <button type="button" className={styles.button} onClick={finishTour}>

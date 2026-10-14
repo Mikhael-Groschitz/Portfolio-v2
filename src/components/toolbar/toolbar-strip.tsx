@@ -56,12 +56,9 @@ function isShown(entry: HTMLElement | null, compact: boolean): boolean {
   if (!entry) {
     return true;
   }
-  const { overflow, compactOnly, essential } = entry.dataset;
+  const { overflow, essential } = entry.dataset;
   if (overflow !== undefined) {
     return false;
-  }
-  if (compactOnly !== undefined) {
-    return compact;
   }
   const collapsed = entry.closest("[data-collapse]") !== null;
   return !(compact && collapsed && essential === undefined);
@@ -233,7 +230,6 @@ export function ToolbarStrip({
               className={styles.entry}
               data-entry={entry.key}
               data-essential={entry.essential || undefined}
-              data-compact-only={entry.compactOnly || undefined}
               data-overflow={hidden.has(entry.key) || undefined}
             >
               {entry.render?.()}

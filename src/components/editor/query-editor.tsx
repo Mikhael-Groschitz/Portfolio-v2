@@ -13,6 +13,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import { useCommands } from "@/components/commands/command-context";
+import { InputAware } from "@/components/input-variants";
 import { useLanguage } from "@/components/locale/language-context";
 import { documentTabId } from "@/components/shell/element-ids";
 import {
@@ -432,7 +433,7 @@ function QueryDocument({
           </pre>
           {empty && (
             <p id={hintId} className={styles.placeholder}>
-              {text.placeholder}
+              <InputAware text={text.placeholder} />
             </p>
           )}
           <textarea

@@ -29,6 +29,7 @@ import {
 } from "@/components/shell/layout-model";
 import { resetLayout, updateLayout } from "@/components/shell/layout-store";
 import { canGoBack, canGoForward } from "@/components/shell/navigation-history";
+import { sectionText } from "@/components/shell/section-execution";
 import {
   type DocumentId,
   documentFileName,
@@ -36,11 +37,10 @@ import {
 } from "@/components/shell/section-routes";
 import { useShell } from "@/components/shell/shell-frame";
 import { useLayout } from "@/components/shell/use-layout";
+import { useInput } from "@/components/shell/use-media-query";
 import { useWorkspace } from "@/components/shell/workspace-context";
-import { getTexts } from "@/content";
+import { getTexts, inputText } from "@/content";
 import type { CommandId, EditAction } from "@/content/types";
-import { catalogObject } from "@/engine/catalog";
-import { sectionScript } from "@/engine/scripts";
 import { AboutDialog } from "./about-dialog";
 import {
   COMMANDS,
@@ -163,6 +163,7 @@ export function CommandProvider({
   const guide = useGuide();
   const layout = useLayout();
   const { locale } = useLanguage();
+  const input = useInput();
   const status = useConnectionStatus();
   const fullScreen = useFullScreen();
   const [dialog, setDialog] = useState<Dialog | null>(null);
@@ -223,7 +224,7 @@ export function CommandProvider({
   function saveDocument(target: DocumentId) {
     const text = isQueryDocument(target)
       ? queryStore(target).getSnapshot().text
-      : sectionScript(catalogObject(target), texts.scripts[target]);
+      : sectionText(target, locale, input);
     download(documentFileName(target), text);
   }
 
@@ -247,6 +248,9 @@ export function CommandProvider({
       store.requestFocus();
       return;
     }
+    if (activeDocument === null || isQueryDocument(activeDocument)) {
+      return;
+    }
     const selection = window.getSelection();
     const code = sectionCode();
     const text =
@@ -254,7 +258,7 @@ export function CommandProvider({
       code?.contains(selection.anchorNode) &&
       !selection.isCollapsed
         ? selection.toString()
-        : (code?.textContent ?? "");
+        : sectionText(activeDocument, locale, input);
     await writeClipboard(text);
   }
 
@@ -264,7 +268,7 @@ export function CommandProvider({
     }
     const pasted = await readClipboard();
     if (pasted === null) {
-      notify(texts.toast.clipboardBlocked);
+      notify(inputText(texts.toast.clipboardBlocked, input));
       return;
     }
     store.update(replaceSelection(store.getSnapshot(), pasted), "paste");

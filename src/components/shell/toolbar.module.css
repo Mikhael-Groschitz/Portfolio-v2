@@ -25,6 +25,10 @@
   gap: 6px;
 }
 
+.toolbars > .quick {
+  display: none;
+}
+
 .group {
   display: flex;
   align-items: center;
@@ -40,13 +44,27 @@
 
 @media (max-width: 767px) {
   .toolbars {
-    grid-template-areas: "standard editor";
-    grid-template-columns: auto minmax(0, 1fr);
+    display: flex;
+    flex-wrap: wrap;
     gap: 4px;
     padding: 4px;
   }
 
   .corner {
     display: none;
+  }
+
+  .toolbars > .quick {
+    display: flex;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  .quick .quickButton {
+    height: auto;
+    min-height: 44px;
+    padding-inline: 8px;
+    white-space: normal;
+    text-align: start;
   }
 }

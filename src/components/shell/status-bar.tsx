@@ -13,6 +13,7 @@ import { useOutsidePointerDown } from "@/components/interaction";
 import { useLanguage } from "@/components/locale/language-context";
 import { getTexts } from "@/content";
 import type { StatusText } from "@/content/types";
+import { useInput } from "./use-media-query";
 import { useWorkspace } from "./workspace-context";
 import type { Run } from "./workspace-state";
 import styles from "./bars.module.css";
@@ -40,6 +41,7 @@ function Tips({ text }: Readonly<{ text: StatusText }>) {
   const labelId = useId();
   const panelId = useId();
   const titleId = useId();
+  const input = useInput();
 
   useOutsidePointerDown(wrapperRef, open, () => setOpen(false));
 
@@ -81,7 +83,7 @@ function Tips({ text }: Readonly<{ text: StatusText }>) {
             {text.tipsTitle}
           </h2>
           <ul className={styles.tipsList}>
-            {text.tips.map((tip) => (
+            {text.tips[input].map((tip) => (
               <li key={tip}>{tip}</li>
             ))}
           </ul>

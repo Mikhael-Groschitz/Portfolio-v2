@@ -15,6 +15,7 @@ import {
   CHEATSHEET_WINDOW_ID,
   useGuide,
 } from "@/components/cheatsheet/guide-context";
+import { setFlag } from "@/components/cheatsheet/session-flags";
 import { CommandProvider } from "@/components/commands/command-context";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { useEasterEggs } from "@/components/easter-eggs/easter-egg-context";
@@ -132,6 +133,7 @@ export function ShellFrame({
     if (!explorerOpen) {
       return;
     }
+    setFlag("workspace-started");
     const returnFocus =
       document.activeElement instanceof HTMLElement
         ? document.activeElement

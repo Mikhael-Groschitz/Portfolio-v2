@@ -50,7 +50,11 @@ export function MenuItem({
   const content = (
     <>
       <span className={styles.itemLabel}>{label}</span>
-      {shortcut && <span className={styles.shortcut}>{shortcut}</span>}
+      {shortcut && (
+        <span className={styles.shortcut} data-input="keyboard">
+          {shortcut}
+        </span>
+      )}
     </>
   );
   if (href) {

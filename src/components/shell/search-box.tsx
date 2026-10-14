@@ -22,7 +22,7 @@ import { CaretDownIcon, SearchIcon } from "@/components/icons";
 import { useOutsidePointerDown } from "@/components/interaction";
 import { useLanguage } from "@/components/locale/language-context";
 import { formatCount } from "@/content/format";
-import { getTexts } from "@/content";
+import { getTexts, inputText } from "@/content";
 import type { CommandId, SectionId } from "@/content/types";
 import { CATALOG } from "@/engine/catalog";
 import { commandFor } from "@/engine/hints";
@@ -32,6 +32,7 @@ import {
   searchEntries,
   searchShortcutFor,
 } from "./search-model";
+import { useInput } from "./use-media-query";
 import { useWorkspace } from "./workspace-context";
 import styles from "./title-bar.module.css";
 
@@ -78,6 +79,7 @@ export function SearchBox({ label }: Readonly<{ label: string }>) {
   const labelId = useId();
   const listId = useId();
   const texts = getTexts(locale).shell;
+  const input = useInput();
 
   useLayoutEffect(() => {
     const popup = popupRef.current;
@@ -159,7 +161,7 @@ export function SearchBox({ label }: Readonly<{ label: string }>) {
         key: `example-${index}`,
         group: "examples",
         label: example.command.replace(/\s*\n\s*/g, " "),
-        detail: example.description,
+        detail: inputText(example.description, input),
         run: () => writeExample(example.command),
       }),
     );
@@ -311,7 +313,10 @@ export function SearchBox({ label }: Readonly<{ label: string }>) {
                           </span>
                         )}
                         {entry.shortcut && (
-                          <span className={styles.searchOptionShortcut}>
+                          <span
+                            className={styles.searchOptionShortcut}
+                            data-input="keyboard"
+                          >
                             {entry.shortcut}
                           </span>
                         )}

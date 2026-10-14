@@ -1,5 +1,6 @@
-import { getTable, getTexts } from "@/content";
+import { getTable, getTexts, inputText } from "@/content";
 import type { Locale } from "@/content/locales";
+import type { Input } from "@/content/types";
 import {
   CATALOG,
   type CatalogColumn,
@@ -75,9 +76,10 @@ export interface ExecutionContext {
   random?: () => number;
   now?: Date;
   v1Available?: boolean;
+  inputMethod?: Input;
 }
 
-type Command = (locale: Locale) => StatementOutput[];
+type Command = (locale: Locale, inputMethod: Input) => StatementOutput[];
 
 const HELP_FORMS = [
   "HELP",
@@ -128,7 +130,7 @@ function resultSetOf(object: CatalogObject, locale: Locale): ResultSet {
   };
 }
 
-function helpResults(locale: Locale): StatementOutput[] {
+function helpResults(locale: Locale, inputMethod: Input): StatementOutput[] {
   const descriptions = getTexts(locale).shell.query.help;
   const objects: ResultSet = {
     source: "sp_help",
@@ -158,7 +160,7 @@ function helpResults(locale: Locale): StatementOutput[] {
       [textCell("EXEC sp_help"), textCell(descriptions.spHelp)],
       [
         textCell(`EXEC sp_help '${qualifiedName(CATALOG[0])}'`),
-        textCell(descriptions.spHelpObject),
+        textCell(inputText(descriptions.spHelpObject, inputMethod)),
       ],
       [textCell("HELP"), textCell(descriptions.help)],
     ],
@@ -253,19 +255,24 @@ export function execute(
   if (input.length > MAX_QUERY_LENGTH) {
     return failure({ text: "", line: 1, original: "" }, context);
   }
-  const { locale, now, v1Available = false } = context;
+  const {
+    locale,
+    now,
+    v1Available = false,
+    inputMethod = "keyboard",
+  } = context;
   const easterEggContext: EasterEggContext = {
     now,
     v1Available,
     run: (statement) =>
-      COMMANDS.get(normalizeStatement(statement))?.(locale) ?? [],
+      COMMANDS.get(normalizeStatement(statement))?.(locale, inputMethod) ?? [],
   };
   const results: StatementResult[] = [];
   let effect: Effect | undefined;
   for (const [index, statement] of splitStatements(input).entries()) {
     const command = COMMANDS.get(statement.text);
     if (command) {
-      results.push(...stamped(command(locale), index));
+      results.push(...stamped(command(locale, inputMethod), index));
       continue;
     }
     if (isObjectHelp(statement.text)) {

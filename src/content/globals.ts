@@ -285,8 +285,12 @@ export const texts: Record<Locale, Texts> = {
           "“{command}” é só enfeite por aqui, mas obrigado por testar.",
         shared: "Link copiado: {url}",
         shareFailed: "Não deu para copiar o link. O endereço é {url}",
-        clipboardBlocked:
-          "O navegador não liberou a área de transferência. Use Ctrl+V direto no editor.",
+        clipboardBlocked: {
+          keyboard:
+            "O navegador não liberou a área de transferência. Use Ctrl+V direto no editor.",
+          touch:
+            "O navegador não liberou a área de transferência. Toque e segure no editor e escolha Colar.",
+        },
         fullScreenBlocked: "O navegador não liberou a tela inteira agora.",
       },
       search: {
@@ -356,8 +360,11 @@ export const texts: Record<Locale, Texts> = {
       },
       window: {
         menu: "Opções da janela",
-        moveHint:
-          "Enter solta ou encaixa a janela. Com ela solta, as setas movem e Shift com as setas muda o tamanho.",
+        moveHint: {
+          keyboard:
+            "Enter solta ou encaixa a janela. Com ela solta, as setas movem e Shift com as setas muda o tamanho.",
+          touch: null,
+        },
         float: "Flutuante",
         dock: "Encaixar",
         autoHide: "Ocultar Automaticamente",
@@ -365,6 +372,7 @@ export const texts: Record<Locale, Texts> = {
       },
       explorer: {
         title: "Pesquisador de Objetos",
+        hint: "Escolha uma tabela para ver o conteúdo.",
         connect: "Conectar",
         disconnect: "Desconectar",
         close: "Fechar o Pesquisador de Objetos",
@@ -396,7 +404,11 @@ export const texts: Record<Locale, Texts> = {
         },
       },
       workspace: {
-        start: "Clique em Nova Consulta para começar.",
+        start: {
+          keyboard: "Clique em Nova Consulta para começar.",
+          touch:
+            "As tabelas ficam no {objectExplorer}. Atalhos e exemplos prontos, na {cheatsheet}.",
+        },
         noScript:
           "O JavaScript está desligado, então a janela fica só para leitura. As tabelas do Pesquisador de Objetos continuam abrindo como links.",
       },
@@ -407,7 +419,12 @@ export const texts: Record<Locale, Texts> = {
       scripts: {
         about: [
           "Oi! Estes são os dados da tabela About: quem eu sou, em poucas linhas.",
-          "Quer continuar passeando? É só clicar em outra tabela na barra da esquerda.",
+          {
+            keyboard:
+              "Quer continuar passeando? É só clicar em outra tabela na barra da esquerda.",
+            touch:
+              "Quer continuar passeando? Abra outra tabela no Pesquisador de Objetos.",
+          },
         ],
         "tech-stack": [
           "Aqui estão as tecnologias com que eu trabalho, agrupadas por categoria.",
@@ -459,7 +476,11 @@ export const texts: Record<Locale, Texts> = {
         travelFarewell: "Segure firme: a TARDIS está partindo para a versão 1.",
         returned: "De volta ao presente.",
         regenerated: "Regeneração concluída. Rosto novo, mesmas memórias.",
-        gameStarted: "Bom jogo! Esc volta ao SSMS a qualquer momento.",
+        gameStarted: {
+          keyboard: "Bom jogo! Esc volta ao SSMS a qualquer momento.",
+          touch:
+            "Bom jogo! Ele foi feito para teclado, então no computador dá para jogar de verdade.",
+        },
         opensInNewTab: "abre em nova aba",
         resize: "Redimensionar o painel de resultados",
         collapse: "Recolher o painel de resultados",
@@ -474,8 +495,12 @@ export const texts: Record<Locale, Texts> = {
       },
       query: {
         editorLabel: "Nova consulta",
-        placeholder:
-          "Escreva uma consulta e pressione F5 ou clique em Executar. Não sabe por onde começar? Digite HELP.",
+        placeholder: {
+          keyboard:
+            "Escreva uma consulta e pressione F5 ou clique em Executar. Não sabe por onde começar? Digite HELP.",
+          touch:
+            "Escreva uma consulta e toque em ▷ Executar. Não sabe por onde começar? Digite HELP.",
+        },
         suggestions: "Sugestões",
         kinds: {
           keyword: "Palavra-chave",
@@ -496,8 +521,11 @@ export const texts: Record<Locale, Texts> = {
           },
           use: "Usa o banco Portfolio (ele já vem selecionado).",
           spHelp: "Lista as tabelas e as procedures do banco.",
-          spHelpObject:
-            "Mostra como uma tabela é feita. Também dá para selecionar o nome no editor e apertar Alt+F1.",
+          spHelpObject: {
+            keyboard:
+              "Mostra como uma tabela é feita. Também dá para selecionar o nome no editor e apertar Alt+F1.",
+            touch: "Mostra como uma tabela é feita.",
+          },
           help: "Mostra esta ajuda.",
         },
       },
@@ -506,8 +534,12 @@ export const texts: Record<Locale, Texts> = {
         close: "Fechar a Colinha",
         move: "Mover a Colinha",
         resize: "Redimensionar a Colinha",
-        intro:
-          "Não precisa saber SQL: comece por uma Nova Consulta ou clique em um item e o resultado aparece na grade.",
+        intro: {
+          keyboard:
+            "Não precisa saber SQL: comece por uma Nova Consulta ou clique em um item e o resultado aparece na grade.",
+          touch:
+            "Não precisa saber SQL: comece por uma Nova Consulta ou toque em um item e o resultado aparece na grade.",
+        },
         sectionsTitle: "Para começar",
         newQuery: {
           label: "Nova Consulta",
@@ -523,8 +555,12 @@ export const texts: Record<Locale, Texts> = {
           resume: "Currículo",
         },
         exploreTitle: "Para explorar",
-        exploreIntro:
-          "Estes exemplos vão para a consulta aberta ou abrem uma nova. Depois é só apertar F5 ou Alt+X.",
+        exploreIntro: {
+          keyboard:
+            "Estes exemplos vão para a consulta aberta ou abrem uma nova. Depois é só apertar F5 ou Alt+X.",
+          touch:
+            "Estes exemplos vão para a consulta aberta ou abrem uma nova. Depois é só tocar em ▷ Executar.",
+        },
         examples: [
           {
             command: "HELP",
@@ -540,8 +576,11 @@ export const texts: Record<Locale, Texts> = {
           },
           {
             command: "EXEC sp_help 'dbo.Career'",
-            description:
-              "Como a tabela é feita. Selecionar o nome e apertar Alt+F1 dá no mesmo.",
+            description: {
+              keyboard:
+                "Como a tabela é feita. Selecionar o nome e apertar Alt+F1 dá no mesmo.",
+              touch: "Como a tabela é feita.",
+            },
           },
           {
             command: "SELECT * FROM dbo.About;\nSELECT * FROM dbo.Contact;",
@@ -560,11 +599,22 @@ export const texts: Record<Locale, Texts> = {
         done: "Concluir",
         steps: {
           query: {
-            title: "Clique em Nova Consulta",
-            text: "Ela abre uma consulta em branco para você escrever os seus comandos. Na dúvida, digite HELP e aperte F5.",
+            title: {
+              keyboard: "Clique em {newQuery}",
+              touch: "Toque em {newQuery}",
+            },
+            text: {
+              keyboard:
+                "Ela abre uma consulta em branco para você escrever os seus comandos. Na dúvida, digite HELP e aperte F5.",
+              touch:
+                "Ela abre uma consulta em branco para você escrever os seus comandos. Na dúvida, digite HELP e toque em ▷ {execute}.",
+            },
           },
           tables: {
-            title: "Ou clique em uma tabela",
+            title: {
+              keyboard: "Ou clique em uma tabela",
+              touch: "Ou toque em uma tabela",
+            },
             text: "Cada tabela guarda uma parte da minha história. Escolha uma, como dbo.Career, e o resultado aparece na hora.",
           },
           cheatsheet: {
@@ -573,7 +623,9 @@ export const texts: Record<Locale, Texts> = {
           },
         },
         compactTablesText:
-          "Cada tabela guarda uma parte da minha história. Toque aqui, escolha uma, como dbo.Career, e o resultado aparece na hora.",
+          "Cada tabela guarda uma parte da minha história. Abra o {objectExplorer}, escolha uma, como dbo.Career, e o resultado aparece na hora.",
+        compactCheatsheetText:
+          "Atalhos para cada seção e exemplos prontos ficam sempre à mão na {cheatsheet}, aqui em cima.",
         menuCheatsheetText:
           "Atalhos para cada seção e exemplos prontos ficam na Colinha, aqui no menu Ajuda.",
       },
@@ -654,8 +706,18 @@ export const texts: Record<Locale, Texts> = {
           title: "Como funciona",
           body: [
             "Oi! Este site é um portfólio disfarçado de banco de dados: cada tabela guarda uma parte da minha história.",
-            "É só clicar em Conectar para entrar, é rapidinho. Os dois perfis de autenticação mostram o mesmo conteúdo; o de visitante vem com um tour curto.",
-            "Quer só dar uma olhada antes? O Cancelar fecha esta janela sem conectar; é só clicar em Conectar quando quiser entrar.",
+            {
+              keyboard:
+                "É só clicar em Conectar para entrar, é rapidinho. Os dois perfis de autenticação mostram o mesmo conteúdo; o de visitante vem com um tour curto.",
+              touch:
+                "É só tocar em Conectar para entrar, é rapidinho. Os dois perfis de autenticação mostram o mesmo conteúdo; o de visitante vem com um tour curto.",
+            },
+            {
+              keyboard:
+                "Quer só dar uma olhada antes? O Cancelar fecha esta janela sem conectar; é só clicar em Conectar quando quiser entrar.",
+              touch:
+                "Quer só dar uma olhada antes? O Cancelar fecha esta janela sem conectar; é só tocar em Conectar quando quiser entrar.",
+            },
           ],
           close: "Entendi",
         },
@@ -671,13 +733,21 @@ export const texts: Record<Locale, Texts> = {
         repositoryHint: "Abre o código deste site no GitHub",
         notifications: "Notificações",
         tipsTitle: "Dicas",
-        tips: [
-          "Selecione o nome de uma tabela no editor e aperte Alt+F1 para ver como ela é feita.",
-          "F5 ou Alt+X executam a consulta. Com um trecho selecionado, só ele roda.",
-          "O Pesquisar, no alto da janela, acha seções e comandos. É só escolher e apertar Enter.",
-          "Os painéis mudam de lugar: arraste o pontilhado do cabeçalho ou use o ▾ para soltar, encaixar ou ocultar.",
-          "Ferramentas > Opções muda o idioma e o tamanho da fonte do editor, e reduz as animações.",
-        ],
+        tips: {
+          keyboard: [
+            "Selecione o nome de uma tabela no editor e aperte Alt+F1 para ver como ela é feita.",
+            "F5 ou Alt+X executam a consulta. Com um trecho selecionado, só ele roda.",
+            "O Pesquisar, no alto da janela, acha seções e comandos. É só escolher e apertar Enter.",
+            "Os painéis mudam de lugar: arraste o pontilhado do cabeçalho ou use o ▾ para soltar, encaixar ou ocultar.",
+            "Ferramentas > Opções muda o idioma e o tamanho da fonte do editor, e reduz as animações.",
+          ],
+          touch: [
+            "EXEC sp_help 'dbo.Career' mostra como a tabela é feita. Troque o nome para ver as outras.",
+            "▷ Executar roda a consulta. Com um trecho selecionado, só ele roda.",
+            "O Pesquisar, no alto da janela, acha seções e comandos. É só escolher um resultado.",
+            "Ferramentas > Opções muda o idioma e o tamanho da fonte do editor, e reduz as animações.",
+          ],
+        },
       },
     },
   },
@@ -963,8 +1033,12 @@ export const texts: Record<Locale, Texts> = {
           "“{command}” is just for show here, but thanks for trying it.",
         shared: "Link copied: {url}",
         shareFailed: "Couldn't copy the link. The address is {url}",
-        clipboardBlocked:
-          "The browser didn't allow clipboard access. Use Ctrl+V right in the editor.",
+        clipboardBlocked: {
+          keyboard:
+            "The browser didn't allow clipboard access. Use Ctrl+V right in the editor.",
+          touch:
+            "The browser didn't allow clipboard access. Touch and hold in the editor and choose Paste.",
+        },
         fullScreenBlocked: "The browser didn't allow full screen right now.",
       },
       search: {
@@ -1034,8 +1108,11 @@ export const texts: Record<Locale, Texts> = {
       },
       window: {
         menu: "Window options",
-        moveHint:
-          "Enter floats or docks the window. While it floats, the arrow keys move it and Shift with the arrows resizes it.",
+        moveHint: {
+          keyboard:
+            "Enter floats or docks the window. While it floats, the arrow keys move it and Shift with the arrows resizes it.",
+          touch: null,
+        },
         float: "Float",
         dock: "Dock",
         autoHide: "Auto Hide",
@@ -1043,6 +1120,7 @@ export const texts: Record<Locale, Texts> = {
       },
       explorer: {
         title: "Object Explorer",
+        hint: "Pick a table to see what's inside.",
         connect: "Connect",
         disconnect: "Disconnect",
         close: "Close Object Explorer",
@@ -1074,7 +1152,11 @@ export const texts: Record<Locale, Texts> = {
         },
       },
       workspace: {
-        start: "Click New Query to get started.",
+        start: {
+          keyboard: "Click New Query to get started.",
+          touch:
+            "The tables live in {objectExplorer}. Shortcuts and ready-made examples, under {cheatsheet}.",
+        },
         noScript:
           "JavaScript is turned off, so the window is read-only. The tables in Object Explorer still open as links.",
       },
@@ -1085,7 +1167,12 @@ export const texts: Record<Locale, Texts> = {
       scripts: {
         about: [
           "Hi! This is the About table: who I am, in a few lines.",
-          "Want to keep exploring? Just click another table in the left panel.",
+          {
+            keyboard:
+              "Want to keep exploring? Just click another table in the left panel.",
+            touch:
+              "Want to keep exploring? Open another table in Object Explorer.",
+          },
         ],
         "tech-stack": [
           "Here are the technologies I work with, grouped by category.",
@@ -1135,7 +1222,11 @@ export const texts: Record<Locale, Texts> = {
         travelFarewell: "Hold on tight: the TARDIS is leaving for version 1.",
         returned: "Back to the present.",
         regenerated: "Regeneration complete. New face, same memories.",
-        gameStarted: "Have fun! Esc brings you back to SSMS at any time.",
+        gameStarted: {
+          keyboard: "Have fun! Esc brings you back to SSMS at any time.",
+          touch:
+            "Have fun! It was made for a keyboard, so you can really play it on a computer.",
+        },
         opensInNewTab: "opens in a new tab",
         resize: "Resize the results pane",
         collapse: "Collapse the results pane",
@@ -1150,8 +1241,12 @@ export const texts: Record<Locale, Texts> = {
       },
       query: {
         editorLabel: "New query",
-        placeholder:
-          "Write a query and press F5 or click Execute. Not sure where to start? Type HELP.",
+        placeholder: {
+          keyboard:
+            "Write a query and press F5 or click Execute. Not sure where to start? Type HELP.",
+          touch:
+            "Write a query and tap ▷ Execute. Not sure where to start? Type HELP.",
+        },
         suggestions: "Suggestions",
         kinds: {
           keyword: "Keyword",
@@ -1171,8 +1266,11 @@ export const texts: Record<Locale, Texts> = {
           },
           use: "Switches to the Portfolio database (it's already selected).",
           spHelp: "Lists the tables and procedures in the database.",
-          spHelpObject:
-            "Shows how a table is built. You can also select its name in the editor and press Alt+F1.",
+          spHelpObject: {
+            keyboard:
+              "Shows how a table is built. You can also select its name in the editor and press Alt+F1.",
+            touch: "Shows how a table is built.",
+          },
           help: "Shows this help.",
         },
       },
@@ -1181,8 +1279,12 @@ export const texts: Record<Locale, Texts> = {
         close: "Close the cheat sheet",
         move: "Move the cheat sheet",
         resize: "Resize the cheat sheet",
-        intro:
-          "No SQL needed: start with a New Query or click an item and the result shows up in the grid.",
+        intro: {
+          keyboard:
+            "No SQL needed: start with a New Query or click an item and the result shows up in the grid.",
+          touch:
+            "No SQL needed: start with a New Query or tap an item and the result shows up in the grid.",
+        },
         sectionsTitle: "Start here",
         newQuery: {
           label: "New Query",
@@ -1198,8 +1300,12 @@ export const texts: Record<Locale, Texts> = {
           resume: "Resume",
         },
         exploreTitle: "To explore",
-        exploreIntro:
-          "These examples go into the open query or open a new one. Then just press F5 or Alt+X.",
+        exploreIntro: {
+          keyboard:
+            "These examples go into the open query or open a new one. Then just press F5 or Alt+X.",
+          touch:
+            "These examples go into the open query or open a new one. Then just tap ▷ Execute.",
+        },
         examples: [
           {
             command: "HELP",
@@ -1215,8 +1321,11 @@ export const texts: Record<Locale, Texts> = {
           },
           {
             command: "EXEC sp_help 'dbo.Career'",
-            description:
-              "How the table is built. Selecting a name and pressing Alt+F1 does the same.",
+            description: {
+              keyboard:
+                "How the table is built. Selecting a name and pressing Alt+F1 does the same.",
+              touch: "How the table is built.",
+            },
           },
           {
             command: "SELECT * FROM dbo.About;\nSELECT * FROM dbo.Contact;",
@@ -1235,11 +1344,22 @@ export const texts: Record<Locale, Texts> = {
         done: "Done",
         steps: {
           query: {
-            title: "Click New Query",
-            text: "It opens a blank query where you can write your own commands. If in doubt, type HELP and press F5.",
+            title: {
+              keyboard: "Click {newQuery}",
+              touch: "Tap {newQuery}",
+            },
+            text: {
+              keyboard:
+                "It opens a blank query where you can write your own commands. If in doubt, type HELP and press F5.",
+              touch:
+                "It opens a blank query where you can write your own commands. If in doubt, type HELP and tap ▷ {execute}.",
+            },
           },
           tables: {
-            title: "Or click a table",
+            title: {
+              keyboard: "Or click a table",
+              touch: "Or tap a table",
+            },
             text: "Each table holds a piece of my story. Pick one, like dbo.Career, and the result shows up right away.",
           },
           cheatsheet: {
@@ -1248,7 +1368,9 @@ export const texts: Record<Locale, Texts> = {
           },
         },
         compactTablesText:
-          "Each table holds a piece of my story. Tap here, pick one, like dbo.Career, and the result shows up right away.",
+          "Each table holds a piece of my story. Open {objectExplorer}, pick one, like dbo.Career, and the result shows up right away.",
+        compactCheatsheetText:
+          "Shortcuts to every section and ready-made examples are always at hand under {cheatsheet}, right up here.",
         menuCheatsheetText:
           "Shortcuts to every section and ready-made examples live in the cheat sheet, right here in the Help menu.",
       },
@@ -1329,8 +1451,18 @@ export const texts: Record<Locale, Texts> = {
           title: "How it works",
           body: [
             "Hi! This site is a portfolio dressed up as a database: each table holds a piece of my story.",
-            "Just click Connect to come in, it only takes a second. Both authentication profiles show the same content; the visitor one comes with a short tour.",
-            "Just want to look around first? Cancel closes this window without connecting; click Connect whenever you want to come in.",
+            {
+              keyboard:
+                "Just click Connect to come in, it only takes a second. Both authentication profiles show the same content; the visitor one comes with a short tour.",
+              touch:
+                "Just tap Connect to come in, it only takes a second. Both authentication profiles show the same content; the visitor one comes with a short tour.",
+            },
+            {
+              keyboard:
+                "Just want to look around first? Cancel closes this window without connecting; click Connect whenever you want to come in.",
+              touch:
+                "Just want to look around first? Cancel closes this window without connecting; tap Connect whenever you want to come in.",
+            },
           ],
           close: "Got it",
         },
@@ -1346,13 +1478,21 @@ export const texts: Record<Locale, Texts> = {
         repositoryHint: "Opens the source of this site on GitHub",
         notifications: "Notifications",
         tipsTitle: "Tips",
-        tips: [
-          "Select a table name in the editor and press Alt+F1 to see how it is built.",
-          "F5 or Alt+X run the query. With a selection, only that part runs.",
-          "Search, at the top of the window, finds sections and commands. Just pick one and press Enter.",
-          "Panels can move: drag the dotted grip in the header or use the ▾ to float, dock or hide them.",
-          "Tools > Options changes the language and the editor font size, and reduces animations.",
-        ],
+        tips: {
+          keyboard: [
+            "Select a table name in the editor and press Alt+F1 to see how it is built.",
+            "F5 or Alt+X run the query. With a selection, only that part runs.",
+            "Search, at the top of the window, finds sections and commands. Just pick one and press Enter.",
+            "Panels can move: drag the dotted grip in the header or use the ▾ to float, dock or hide them.",
+            "Tools > Options changes the language and the editor font size, and reduces animations.",
+          ],
+          touch: [
+            "EXEC sp_help 'dbo.Career' shows how the table is built. Swap the name to see the others.",
+            "▷ Execute runs the query. With a selection, only that part runs.",
+            "Search, at the top of the window, finds sections and commands. Just pick a result.",
+            "Tools > Options changes the language and the editor font size, and reduces animations.",
+          ],
+        },
       },
     },
   },

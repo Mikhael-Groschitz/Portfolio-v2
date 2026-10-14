@@ -1,14 +1,26 @@
+import { InputVariants } from "@/components/input-variants";
 import { pageLocale } from "@/components/locale/page-locale";
 import { documentTabId } from "@/components/shell/element-ids";
 import type { SectionId } from "@/content/types";
 import type { CodeToken } from "./highlight";
-import { scriptLines } from "./section-scripts";
+import { type ScriptLine, scriptLines } from "./section-scripts";
 import styles from "./editor.module.css";
+
+function Tokens({ tokens }: Readonly<{ tokens: readonly CodeToken[] }>) {
+  return tokens.map((token, position) => (
+    <span
+      key={position}
+      style={token.color ? { color: token.color } : undefined}
+    >
+      {token.content}
+    </span>
+  ));
+}
 
 function ScriptView({
   section,
   lines,
-}: Readonly<{ section: SectionId; lines: readonly CodeToken[][] }>) {
+}: Readonly<{ section: SectionId; lines: readonly ScriptLine[] }>) {
   return (
     <section
       tabIndex={0}
@@ -31,14 +43,14 @@ function ScriptView({
                 {index + 1}
               </span>
               <span className={styles.lineText}>
-                {line.map((token, position) => (
-                  <span
-                    key={position}
-                    style={token.color ? { color: token.color } : undefined}
-                  >
-                    {token.content}
-                  </span>
-                ))}
+                {Array.isArray(line) ? (
+                  <Tokens tokens={line} />
+                ) : (
+                  <InputVariants
+                    keyboard={<Tokens tokens={line.keyboard} />}
+                    touch={<Tokens tokens={line.touch} />}
+                  />
+                )}
               </span>
             </span>
           ))}

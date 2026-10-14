@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { getTable, getTexts } from ".";
+import { getTable, getTexts, withLabels } from ".";
 import {
   formatCompletionTime,
   formatCount,
@@ -8,12 +8,18 @@ import {
   formatYearMonth,
 } from "./format";
 import { DEFAULT_LOCALE, LOCALES, type Locale } from "./locales";
-import { SECTION_IDS } from "./types";
+import { type ByInput, INPUTS, SECTION_IDS } from "./types";
 
 const YEAR_MONTH = /^\d{4}-(0[1-9]|1[0-2])$/;
 const WEB_URL = /^https?:\/\/\S+$/;
 const CONTACT_URL = /^(https?:\/\/|mailto:|tel:)\S+$/;
 const LOCAL_PDF = /^\/\S+\.pdf$/;
+const KEY_NAMES = /\b(?:F\d{1,2}|Ctrl|Shift|Enter|Esc|Tab)\b|\bAlt\+/;
+const KEYBOARD_OR_MOUSE: Record<Locale, RegExp> = {
+  "pt-BR":
+    /\b(?:teclas?|pression\w*|apert\w*|cli(?:c|qu)\w*|mouse|arrast\w*)\b|\bbotão direito/i,
+  en: /\b(?:keys?|press(?:es|ing)?|click\w*|hover\w*|drag(?:s|ged|ging)?|mouse)\b/i,
+};
 
 const otherLocales = LOCALES.filter((locale) => locale !== DEFAULT_LOCALE);
 
@@ -37,6 +43,37 @@ function collectStrings(value: unknown): string[] {
     return Object.values(value).flatMap(collectStrings);
   }
   return [];
+}
+
+function isByInput(value: object): value is ByInput<unknown> {
+  const keys = Object.keys(value);
+  return (
+    !Array.isArray(value) &&
+    keys.length === INPUTS.length &&
+    INPUTS.every((input) => keys.includes(input))
+  );
+}
+
+function touchStrings(value: unknown): string[] {
+  if (typeof value !== "object" || value === null) {
+    return collectStrings(value);
+  }
+  return isByInput(value)
+    ? collectStrings(value.touch)
+    : Object.values(value).flatMap(touchStrings);
+}
+
+function variantPairs(value: unknown): ByInput<unknown>[] {
+  if (typeof value !== "object" || value === null) {
+    return [];
+  }
+  return isByInput(value)
+    ? [value]
+    : Object.values(value).flatMap(variantPairs);
+}
+
+function citesKeyboardOrMouse(text: string, locale: Locale): boolean {
+  return KEY_NAMES.test(text) || KEYBOARD_OR_MOUSE[locale].test(text);
 }
 
 function sharedFacts(locale: Locale) {
@@ -84,6 +121,24 @@ describe("texts", () => {
     }
   });
 
+  it("names only real commands in the guide placeholders", () => {
+    for (const locale of LOCALES) {
+      const { tour, workspace, commands } = getTexts(locale).shell;
+      const keys = collectStrings([
+        tour.steps,
+        tour.compactTablesText,
+        tour.compactCheatsheetText,
+        workspace.start,
+      ]).flatMap((text) =>
+        Array.from(text.matchAll(/\{(\w+)\}/g), ([, key]) => key),
+      );
+      expect(keys.length, locale).toBeGreaterThan(0);
+      for (const key of keys) {
+        expect(Object.hasOwn(commands, key), `${locale} {${key}}`).toBe(true);
+      }
+    }
+  });
+
   it("uses year-month dates that start before they end", () => {
     for (const job of getTexts().career) {
       expect(YEAR_MONTH.test(job.startDate), job.company).toBe(true);
@@ -110,6 +165,41 @@ describe("texts", () => {
       }
       expect(LOCAL_PDF.test(texts.resume.url), locale).toBe(true);
     }
+  });
+});
+
+describe("texts on touch screens", () => {
+  it("never mention keys, shortcuts or the mouse", () => {
+    for (const locale of LOCALES) {
+      const offenders = touchStrings(getTexts(locale)).filter((text) =>
+        citesKeyboardOrMouse(text, locale),
+      );
+      expect(offenders, locale).toEqual([]);
+    }
+  });
+
+  it("keep a keyboard version only where it mentions keys or the mouse", () => {
+    for (const locale of LOCALES) {
+      for (const pair of variantPairs(getTexts(locale))) {
+        const keyboard = collectStrings(pair.keyboard);
+        expect(
+          keyboard.some((text) => citesKeyboardOrMouse(text, locale)),
+          keyboard.join(" | "),
+        ).toBe(true);
+      }
+    }
+  });
+});
+
+describe("withLabels", () => {
+  it("fills the button names in both versions and keeps other placeholders", () => {
+    expect(
+      withLabels(
+        { keyboard: "Click {newQuery}", touch: "Tap {newQuery}, {count}" },
+        { newQuery: "New Query" },
+      ),
+    ).toEqual({ keyboard: "Click New Query", touch: "Tap New Query, {count}" });
+    expect(withLabels("{constructor}", {})).toBe("{constructor}");
   });
 });
 

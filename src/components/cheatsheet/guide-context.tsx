@@ -132,6 +132,7 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
     }
     sheetReturnFocus.current = activeElement();
     setSheetRequested(true);
+    setTourIndex(null);
     focusLater(FIRST_ITEM);
   }, [chooseCheatsheet, docked]);
 
@@ -141,7 +142,8 @@ export function GuideProvider({ children }: Readonly<{ children: ReactNode }>) {
       concealWindow("cheatsheet");
     } else {
       setSheetRequested(false);
-      sheetReturnFocus.current?.focus();
+      const target = sheetReturnFocus.current;
+      requestAnimationFrame(() => target?.focus());
     }
   }, [chooseCheatsheet, docked]);
 

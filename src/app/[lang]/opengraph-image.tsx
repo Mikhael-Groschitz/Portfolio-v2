@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import path from "node:path";
 import { ImageResponse } from "next/og";
 import { imageAlt } from "@/app/site-metadata";
-import { getTexts } from "@/content";
+import { getTexts, inputText } from "@/content";
 import { DEFAULT_LOCALE, isLocale } from "@/content/locales";
 import { DATABASE, SERVER } from "@/engine/catalog";
 import { type TokenName, parseTokens } from "@/theme/tokens";
@@ -81,7 +81,7 @@ export default async function OpenGraphImage({ params }: ImageProps) {
         }}
       >
         <div style={{ display: "flex", color: color("syntax-comment") }}>
-          {`-- ${shell.scripts.about[0]}`}
+          {`-- ${inputText(shell.scripts.about[0], "keyboard")}`}
         </div>
         <div style={{ display: "flex", marginTop: 12 }}>
           {QUERY.map(({ text, token }) => (

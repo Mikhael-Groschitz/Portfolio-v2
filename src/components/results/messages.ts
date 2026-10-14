@@ -3,7 +3,8 @@ import {
   formatCount,
   formatDuration,
 } from "@/content/format";
-import type { ResultsText } from "@/content/types";
+import { inputText } from "@/content";
+import type { Input, ResultsText } from "@/content/types";
 import type { ExecutionOutcome, StatementResult } from "@/engine/execute";
 import type { QueryHint } from "@/engine/hints";
 
@@ -56,6 +57,7 @@ function hintLine(hint: QueryHint, text: ResultsText): string {
 function effectLines(
   { effect, database }: ResultsOutcome,
   text: ResultsText,
+  input: Input,
 ): string[] {
   const changed = text.databaseChanged.replace("{database}", database);
   switch (effect) {
@@ -66,7 +68,7 @@ function effectLines(
     case "regenerate":
       return [text.regenerated];
     case "game":
-      return [text.gameStarted];
+      return [inputText(text.gameStarted, input)];
     default:
       return [];
   }
@@ -91,9 +93,13 @@ function statementSections(
   return [...sections.values()].filter((section) => section.lines.length > 0);
 }
 
-function sectionsOf(outcome: ResultsOutcome, text: ResultsText): Section[] {
+function sectionsOf(
+  outcome: ResultsOutcome,
+  text: ResultsText,
+  input: Input,
+): Section[] {
   const sections = statementSections(outcome.results, text);
-  const effect = effectLines(outcome, text);
+  const effect = effectLines(outcome, text, input);
   if (effect.length > 0) {
     sections.push({ lines: effect, weight: 1 });
   }
@@ -132,6 +138,7 @@ export function messageBlocks(
   outcome: ExecutionOutcome,
   text: ResultsText,
   timing: RunTiming,
+  input: Input,
 ): MessageBlock[] {
   if (outcome.kind === "error") {
     const completion = timing.completedAt
@@ -144,7 +151,7 @@ export function messageBlocks(
       },
     ];
   }
-  return timed(sectionsOf(outcome, text), text, timing).map((block) => ({
+  return timed(sectionsOf(outcome, text, input), text, timing).map((block) => ({
     error: null,
     text: block,
   }));

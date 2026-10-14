@@ -3,6 +3,7 @@
 import { type KeyboardEvent, type MouseEvent, useId, useRef } from "react";
 import { useConnectionStatus } from "@/components/connect/use-connection-status";
 import { NewQueryIcon, ProcedureIcon, TableIcon } from "@/components/icons";
+import { InputAware } from "@/components/input-variants";
 import { isPlainClick } from "@/components/interaction";
 import { useLanguage } from "@/components/locale/language-context";
 import { localizedPath } from "@/components/locale/locale-routing";
@@ -141,7 +142,9 @@ export function CheatsheetPanel({
           />
         </div>
         <div className={styles.body}>
-          <p className={styles.intro}>{text.intro}</p>
+          <p className={styles.intro}>
+            <InputAware text={text.intro} />
+          </p>
           <h3 className={styles.heading}>{text.sectionsTitle}</h3>
           <ul className={styles.list}>
             <li>
@@ -187,7 +190,9 @@ export function CheatsheetPanel({
             ))}
           </ul>
           <h3 className={styles.heading}>{text.exploreTitle}</h3>
-          <p className={styles.intro}>{text.exploreIntro}</p>
+          <p className={styles.intro}>
+            <InputAware text={text.exploreIntro} />
+          </p>
           <ul className={styles.list}>
             {text.examples.map(({ command }, index) => (
               <li key={command}>
@@ -201,7 +206,7 @@ export function CheatsheetPanel({
                   </span>
                   <span className={styles.itemText}>
                     <code className={styles.itemCode}>{command}</code>
-                    {text.examples[index].description}
+                    <InputAware text={text.examples[index].description} />
                   </span>
                 </button>
               </li>

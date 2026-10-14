@@ -46,6 +46,7 @@ import {
   isQueryDocument,
   routeFromSegment,
 } from "./section-routes";
+import { useInput } from "./use-media-query";
 import {
   type FinishedRun,
   type Run,
@@ -142,6 +143,7 @@ export function WorkspaceProvider({
 }: Readonly<{ children: ReactNode }>) {
   const router = useRouter();
   const { locale } = useLanguage();
+  const inputMethod = useInput();
   const segment = useSelectedLayoutSegment();
   const [state, dispatch] = useReducer(
     workspaceReducer,
@@ -233,21 +235,21 @@ export function WorkspaceProvider({
           : null);
       startRun(document, () =>
         input !== null || isQueryDocument(document)
-          ? executeQuery(input ?? "", locale)
+          ? executeQuery(input ?? "", locale, inputMethod)
           : executeSection(document, locale),
       );
     },
-    [queryStore, startRun, locale],
+    [queryStore, startRun, locale, inputMethod],
   );
 
   const parseDocument = useCallback(
     (document: DocumentId) => {
       const input = isQueryDocument(document)
         ? queryToRun(queryStore(document).getSnapshot())
-        : sectionText(document, locale);
+        : sectionText(document, locale, inputMethod);
       startRun(document, () => parseQuery(input, locale));
     },
-    [queryStore, startRun, locale],
+    [queryStore, startRun, locale, inputMethod],
   );
 
   const cancelRun = useCallback(

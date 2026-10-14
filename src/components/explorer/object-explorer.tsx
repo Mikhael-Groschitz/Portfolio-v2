@@ -21,6 +21,7 @@ export async function ObjectExplorer() {
           text={{ ...window, move: explorer.move, close: explorer.close }}
         />
       </div>
+      <p className={styles.hint}>{explorer.hint}</p>
       <ExplorerToolbar
         connectLabel={explorer.connect}
         disconnectLabel={explorer.disconnect}

@@ -296,12 +296,16 @@
   }
 
   .grid tbody tr {
+    display: grid;
+    grid-template-columns: fit-content(40%) minmax(0, 1fr);
+    column-gap: 10px;
     border: 1px solid var(--grid-border);
+    border-block-start-color: var(--text-muted);
     background: var(--grid-row);
   }
 
   .grid tbody tr + tr {
-    margin-block-start: 8px;
+    margin-block-start: 12px;
   }
 
   .grid th,
@@ -312,7 +316,7 @@
   }
 
   .grid tbody th {
-    border-block-end: 1px solid var(--grid-border);
+    grid-column: 1 / -1;
     background: var(--grid-header);
     color: var(--text-muted);
   }
@@ -330,14 +334,21 @@
 
   .grid td {
     display: grid;
-    grid-template-columns: minmax(11ch, max-content) minmax(0, 1fr);
-    gap: 8px;
+    grid-column: 1 / -1;
+    grid-template-columns: subgrid;
+    padding-block: 6px;
+    padding-inline: 0 10px;
+    border-block-start: 1px solid var(--grid-border);
     overflow-wrap: anywhere;
   }
 
+  .grid td::before {
+    margin-block: -6px;
+    padding: 6px 10px;
+    border-inline-end: 1px solid var(--grid-border);
+  }
+
   .grid .wrap {
-    grid-template-columns: minmax(0, 1fr);
-    gap: 2px;
     min-width: 0;
   }
 

@@ -1,8 +1,17 @@
 import { describe, expect, it } from "vitest";
-import { getTexts } from "@/content";
+import { getTexts, inputText } from "@/content";
 import { formatCompletionTime } from "@/content/format";
+import { LOCALES } from "@/content/locales";
+import { INPUTS } from "@/content/types";
+import { CATALOG, qualifiedName } from "@/engine/catalog";
 import { arrivalOutcome } from "@/engine/easter-eggs";
-import { type ResultSet, execute } from "@/engine/execute";
+import {
+  type ExecutionOutcome,
+  type ResultSet,
+  execute,
+  resultSetsOf,
+} from "@/engine/execute";
+import { sectionQuery } from "@/engine/scripts";
 import { type RunTiming, messageBlocks } from "./messages";
 import { resultsAsText } from "./results-text";
 
@@ -15,6 +24,7 @@ function blocksOf(command: string, run: RunTiming = timing) {
     execute(command, { locale: "pt-BR", random: () => 0 }),
     text,
     run,
+    "keyboard",
   );
 }
 
@@ -73,12 +83,27 @@ describe("messageBlocks", () => {
   });
 
   it("keeps the effect lines first, as the easter eggs expect", () => {
-    const [block] = messageBlocks(arrivalOutcome(), text, timing);
+    const [block] = messageBlocks(arrivalOutcome(), text, timing, "keyboard");
     expect(
       block.text.startsWith(
         "Contexto do banco de dados alterado para 'Portfolio'.\nDe volta ao presente.\n",
       ),
     ).toBe(true);
+  });
+
+  it("words the game message for the visitor's input", () => {
+    const game: ExecutionOutcome = {
+      kind: "results",
+      database: "Portfolio",
+      results: [],
+      effect: "game",
+    };
+    for (const input of INPUTS) {
+      const [block] = messageBlocks(game, text, timing, input);
+      expect(block.text.split("\n")[0]).toBe(
+        inputText(text.gameStarted, input),
+      );
+    }
   });
 
   it("shows errors with the hint and a single completion time", () => {
@@ -110,6 +135,35 @@ const single: ResultSet = {
   columns: [{ name: "Id", type: "text" }],
   rows: [[{ kind: "link", text: "https://example.com", href: "#" }]],
 };
+
+describe("result sets on the grid", () => {
+  it("give every column a header and every row one cell per column", () => {
+    const queries = [
+      "HELP",
+      ...CATALOG.flatMap((object) => [
+        sectionQuery(object),
+        `EXEC sp_help '${qualifiedName(object)}'`,
+      ]),
+    ];
+    for (const locale of LOCALES) {
+      for (const query of queries) {
+        const sets = resultSetsOf(execute(query, { locale }));
+        expect(sets.length, `${locale} ${query}`).toBeGreaterThan(0);
+        for (const { source, columns, rows } of sets) {
+          const names = columns.map((column) => column.name.trim());
+          const where = `${locale} ${query} ${source}`;
+          expect(names.length, where).toBeGreaterThan(0);
+          expect(names.every(Boolean), where).toBe(true);
+          expect(new Set(names).size, where).toBe(names.length);
+          expect(
+            rows.every((row) => row.length === columns.length),
+            where,
+          ).toBe(true);
+        }
+      }
+    }
+  });
+});
 
 describe("results as text", () => {
   it("lines the columns up under a dashed header, like SSMS", () => {

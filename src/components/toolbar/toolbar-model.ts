@@ -4,7 +4,6 @@ export interface ToolbarEntry {
   key: string;
   separator?: boolean;
   essential?: boolean;
-  compactOnly?: boolean;
   menu?: () => readonly PopupMenuItem[];
 }
 
@@ -63,7 +62,7 @@ export function overflowMenu(
   for (const entry of entries) {
     if (entry.separator) {
       groups.push([]);
-    } else if (hidden.has(entry.key) && !entry.compactOnly && entry.menu) {
+    } else if (hidden.has(entry.key) && entry.menu) {
       groups[groups.length - 1].push(...entry.menu());
     }
   }

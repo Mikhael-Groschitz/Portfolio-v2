@@ -1,4 +1,6 @@
 import { useEffect, useId, useRef } from "react";
+import { InputAware } from "@/components/input-variants";
+import { inputText } from "@/content";
 import type { ConnectText } from "@/content/types";
 import styles from "./connect-dialog.module.css";
 
@@ -30,7 +32,9 @@ export function HelpPopover({ id, text, onClose }: Readonly<HelpPopoverProps>) {
       </h3>
       <div id={bodyId} className={styles.helpBody}>
         {text.body.map((paragraph) => (
-          <p key={paragraph}>{paragraph}</p>
+          <p key={inputText(paragraph, "keyboard")}>
+            <InputAware text={paragraph} />
+          </p>
         ))}
       </div>
       <div className={styles.helpActions}>
