@@ -45,7 +45,7 @@ Sem elas o site funciona normalmente, só a viagem fica fora do ar.
 
 ## Estrutura
 
-- `src/content`: todos os textos do site, em português e inglês
+- `src/content`: todos os textos do site, em português e inglês. Texto que cita tecla, atalho ou mouse tem também uma versão para toque, e um teste falha se ela faltar
 - `src/engine`: o "banco de dados" que executa as consultas, sem React
 - `src/theme`: as cores do tema, em `tokens.css`
 - `src/components`: a janela do SSMS e tudo que aparece nela

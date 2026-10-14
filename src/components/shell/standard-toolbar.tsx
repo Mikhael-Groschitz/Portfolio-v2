@@ -28,9 +28,9 @@ import {
 import styles from "@/components/toolbar/toolbar.module.css";
 import { getTexts } from "@/content";
 import type { CommandId } from "@/content/types";
-import { ExplorerToggle } from "./explorer-toggle";
 import { backVisits } from "./navigation-history";
 import { documentFileName, isQueryDocument } from "./section-routes";
+import { useShell } from "./shell-frame";
 import { useWorkspace } from "./workspace-context";
 import layout from "./toolbar.module.css";
 
@@ -73,6 +73,7 @@ export function StandardToolbar() {
   const commands = useCommands();
   const { activeDocument, queryStore, visits, navigate } = useWorkspace();
   const { pulse } = useGuide();
+  const { compact } = useShell();
   const { locale } = useLanguage();
   const texts = getTexts(locale).shell;
   const store =
@@ -116,12 +117,6 @@ export function StandardToolbar() {
 
   const entries: RenderedEntry[] = [
     {
-      key: "explorer",
-      compactOnly: true,
-      essential: true,
-      render: () => <ExplorerToggle label={texts.explorer.title} />,
-    },
-    {
       key: "back",
       render: () => (
         <SplitButton
@@ -162,7 +157,7 @@ export function StandardToolbar() {
           labelMode="visible"
           data={{
             "data-tour": "new-query",
-            "data-highlight": pulse ? "" : undefined,
+            "data-highlight": pulse && !compact ? "" : undefined,
           }}
         />
       ),

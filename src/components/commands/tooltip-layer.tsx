@@ -167,6 +167,7 @@ export function TooltipLayer() {
       className={styles.tooltip}
       aria-hidden="true"
       data-tooltip=""
+      data-input="keyboard"
     >
       {tip.text}
     </div>

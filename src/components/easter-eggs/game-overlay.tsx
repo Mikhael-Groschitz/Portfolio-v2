@@ -2,6 +2,7 @@
 
 import dynamic from "next/dynamic";
 import { useEffect, useId, useRef } from "react";
+import { TOUCH_MEDIA_QUERY } from "@/components/shell/breakpoints";
 import { useMediaQuery } from "@/components/shell/use-media-query";
 import type { GameOverlayText } from "@/content/types";
 import { GAME_TITLE } from "@/game/title";
@@ -13,7 +14,6 @@ const GameScreen = dynamic(() => import("@/game/ui/game-screen"), {
   loading: () => null,
 });
 
-const COARSE_POINTER = "(hover: none) and (pointer: coarse)";
 const FINE_POINTER = "(any-pointer: fine)";
 
 function TouchNotice({
@@ -52,7 +52,7 @@ function GameLayer({
   text,
   onExit,
 }: Readonly<{ text: GameOverlayText; onExit: () => void }>) {
-  const coarse = useMediaQuery(COARSE_POINTER);
+  const coarse = useMediaQuery(TOUCH_MEDIA_QUERY);
   const fine = useMediaQuery(FINE_POINTER);
 
   useEffect(() => {

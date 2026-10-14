@@ -148,6 +148,15 @@ export function ExplorerIcon(props: Readonly<IconProps>) {
   );
 }
 
+export function CheatsheetIcon(props: Readonly<IconProps>) {
+  return (
+    <Icon {...props}>
+      <path d="M8 4.5c-1.5-1-3.5-1.3-6.5-1v9c3-.3 5 0 6.5 1 1.5-1 3.5-1.3 6.5-1v-9c-3-.3-5 0-6.5 1zM8 4.5v9" />
+      <path d="M3.5 6.5c1-.1 2-.1 3 .3M3.5 9c1-.1 2-.1 3 .3M9.5 6.8c1-.4 2-.4 3-.3M9.5 9.3c1-.4 2-.4 3-.3" />
+    </Icon>
+  );
+}
+
 export function MenuIcon(props: Readonly<IconProps>) {
   return (
     <Icon {...props}>

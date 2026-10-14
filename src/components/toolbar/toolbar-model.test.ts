@@ -56,7 +56,6 @@ describe("hiddenEntries", () => {
 
 describe("overflowMenu", () => {
   const entries: ToolbarEntry[] = [
-    { key: "toggle", compactOnly: true, menu: () => [] },
     item("back"),
     { key: "s1", separator: true },
     item("save"),
@@ -66,9 +65,7 @@ describe("overflowMenu", () => {
   ];
 
   it("lists the hidden buttons in order, with a line between groups", () => {
-    expect(
-      overflowMenu(entries, new Set(["toggle", "saveAll", "undo"])),
-    ).toEqual([
+    expect(overflowMenu(entries, new Set(["saveAll", "undo"]))).toEqual([
       { key: "saveAll", label: "saveAll" },
       { key: "undo", label: "undo", separatorBefore: true },
     ]);

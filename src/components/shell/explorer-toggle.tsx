@@ -1,25 +1,36 @@
 "use client";
 
 import { ExplorerIcon } from "@/components/icons";
-import styles from "@/components/toolbar/toolbar.module.css";
 import { EXPLORER_ID } from "./element-ids";
 import { useShell } from "./shell-frame";
 
-export function ExplorerToggle({ label }: Readonly<{ label: string }>) {
+interface ExplorerToggleProps {
+  label: string;
+  className: string;
+  data?: Record<`data-${string}`, string | undefined>;
+}
+
+export function ExplorerToggle({
+  label,
+  className,
+  data,
+}: Readonly<ExplorerToggleProps>) {
   const { explorerOpen, openExplorer } = useShell();
 
   return (
     <button
       type="button"
-      className={styles.button}
+      className={className}
       aria-expanded={explorerOpen}
       aria-controls={EXPLORER_ID}
-      data-tour="explorer-toggle"
-      data-tip=""
-      onClick={openExplorer}
+      onClick={(event) => {
+        event.currentTarget.focus();
+        openExplorer();
+      }}
+      {...data}
     >
       <ExplorerIcon />
-      <span className="visually-hidden">{label}</span>
+      <span>{label}</span>
     </button>
   );
 }

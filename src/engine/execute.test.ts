@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { getTable, getTexts } from "@/content";
+import { getTable, getTexts, inputText } from "@/content";
 import { LOCALES } from "@/content/locales";
+import { INPUTS, type Input } from "@/content/types";
 import { CATALOG, catalogObject } from "./catalog";
 import { ERROR_POOL } from "./errors";
 import {
@@ -29,26 +30,30 @@ function onlyResultSet(outcome: ExecutionOutcome) {
 }
 
 describe("execute", () => {
-  it("runs every section script, comments included, in each language", () => {
+  it("runs every section script, comments included, in each language and input", () => {
     for (const object of CATALOG) {
       for (const locale of LOCALES) {
-        const script = sectionScript(
-          object,
-          getTexts(locale).shell.scripts[object.section],
-        );
-        const outcome = execute(script, { locale });
-        expect(outcome).toMatchObject({
-          kind: "results",
-          results: [{ kind: "done" }, { kind: "rows" }],
-        });
-        const resultSet = onlyResultSet(outcome);
-        expect(resultSet.source).toBe(`dbo.${object.name}`);
-        expect(resultSet.columns.map((column) => column.name)).toEqual(
-          object.columns.map((column) => column.name),
-        );
-        expect(resultSet.rows).toHaveLength(
-          getTable(object.section, locale).length,
-        );
+        for (const input of INPUTS) {
+          const script = sectionScript(
+            object,
+            getTexts(locale).shell.scripts[object.section].map((line) =>
+              inputText(line, input),
+            ),
+          );
+          const outcome = execute(script, { locale });
+          expect(outcome).toMatchObject({
+            kind: "results",
+            results: [{ kind: "done" }, { kind: "rows" }],
+          });
+          const resultSet = onlyResultSet(outcome);
+          expect(resultSet.source).toBe(`dbo.${object.name}`);
+          expect(resultSet.columns.map((column) => column.name)).toEqual(
+            object.columns.map((column) => column.name),
+          );
+          expect(resultSet.rows).toHaveLength(
+            getTable(object.section, locale).length,
+          );
+        }
       }
     }
   });
@@ -179,6 +184,19 @@ describe("execute", () => {
       });
     },
   );
+
+  it("describes sp_help for the visitor's input, keyboard by default", () => {
+    const spHelpObject = getTexts("en").shell.query.help.spHelpObject;
+    const commandsFor = (inputMethod?: Input) =>
+      resultSets(execute("HELP", { locale: "en", inputMethod }))[1].rows;
+    for (const input of INPUTS) {
+      expect(commandsFor(input)).toContainEqual([
+        { kind: "text", text: "EXEC sp_help 'dbo.About'" },
+        { kind: "text", text: inputText(spHelpObject, input) },
+      ]);
+    }
+    expect(commandsFor()).toEqual(commandsFor("keyboard"));
+  });
 
   it("numbers the results by the statement that produced them", () => {
     const outcome = execute("USE Portfolio; SELECT * FROM dbo.About; HELP", {

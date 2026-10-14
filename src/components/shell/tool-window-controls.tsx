@@ -8,6 +8,7 @@ import {
   useRef,
 } from "react";
 import { CaretDownIcon, CloseIcon, PinIcon } from "@/components/icons";
+import { InputVariants } from "@/components/input-variants";
 import { MenuButton, type PopupMenuItem } from "@/components/menu/menu-button";
 import type { WindowText } from "@/content/types";
 import {
@@ -172,7 +173,7 @@ function MoveHandle({ windowId, panelId, text, onChoice }: WindowProps) {
         {text.move}
       </span>
       <span id={hintId} className="visually-hidden">
-        {text.moveHint}
+        <InputVariants {...text.moveHint} />
       </span>
       <button
         type="button"

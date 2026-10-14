@@ -44,8 +44,27 @@
   color: var(--text-muted);
 }
 
+.emptyExplorer {
+  display: none;
+}
+
 @media (max-width: 767px) {
   .document {
     border-inline: 0;
+  }
+
+  .emptyExplorer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 48px;
+    margin-block-start: 14px;
+    padding-inline: 20px;
+    border: 1px solid var(--accent);
+    border-radius: 2px;
+    background: var(--bg-tab-active);
+    color: var(--text);
+    font: inherit;
+    font-size: 15px;
   }
 }

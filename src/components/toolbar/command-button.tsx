@@ -18,8 +18,8 @@ interface CommandButtonProps {
   data?: Record<`data-${string}`, string | undefined>;
 }
 
-const LABEL_CLASSES: Record<Exclude<LabelMode, "aria">, string> = {
-  visible: styles.label,
+const LABEL_CLASSES: Record<Exclude<LabelMode, "aria">, string | undefined> = {
+  visible: undefined,
   hidden: "visually-hidden",
 };
 

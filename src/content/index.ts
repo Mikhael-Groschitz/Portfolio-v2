@@ -1,6 +1,6 @@
 import { texts } from "./globals";
 import { DEFAULT_LOCALE, type Locale } from "./locales";
-import type { SectionId, Tables, Texts } from "./types";
+import type { Input, InputText, SectionId, Tables, Texts } from "./types";
 
 const readers: {
   [K in SectionId]: (localeTexts: Texts, locale: Locale) => Tables[K];
@@ -19,6 +19,23 @@ const readers: {
 
 export function getTexts(locale: Locale = DEFAULT_LOCALE): Texts {
   return texts[locale];
+}
+
+export function inputText(text: InputText, input: Input): string {
+  return typeof text === "string" ? text : text[input];
+}
+
+export function withLabels(
+  text: InputText,
+  labels: Readonly<Record<string, string>>,
+): InputText {
+  const fill = (value: string) =>
+    value.replace(/\{(\w+)\}/g, (placeholder, key: string) =>
+      Object.hasOwn(labels, key) ? labels[key] : placeholder,
+    );
+  return typeof text === "string"
+    ? fill(text)
+    : { keyboard: fill(text.keyboard), touch: fill(text.touch) };
 }
 
 export function getTable<K extends SectionId>(

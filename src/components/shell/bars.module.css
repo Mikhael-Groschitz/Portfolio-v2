@@ -165,6 +165,12 @@
     padding-inline-end: 8px;
   }
 
+  .connectionStatus > [role="status"] {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
   .segment {
     padding-inline: 6px;
   }
