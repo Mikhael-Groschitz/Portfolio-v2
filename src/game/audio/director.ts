@@ -1,30 +1,34 @@
 import type { World } from "../core/world";
 import type { Boss } from "../entities/boss";
 import { centerX } from "../entities/enemy";
+import type { BossSlot } from "../levels/campaign";
 import { TILE } from "../levels/level";
 import type { TrackName } from "./tracks";
 
-function bossTrack(boss: Boss): TrackName | null {
+function bossTrack(boss: Boss, slot: BossSlot): TrackName | null {
   switch (boss.state) {
     case "dormant":
-      return boss.kind === "collector" ? "stage" : null;
+      return slot.calm;
     case "gone":
       return "stage";
     case "defeat":
     case "commit":
       return null;
     default:
-      return "boss";
+      return slot.fight;
   }
 }
 
-function entranceTrack(world: World, current: TrackName | null): TrackName {
-  if (current === "stage") {
-    return "stage";
-  }
+function stageTrack(
+  world: World,
+  music: TrackName,
+  current: TrackName | null,
+): TrackName {
   const [arch] = world.room.level.places.arch;
-  const inCorridor = arch && centerX(world.hero) >= (arch.column + 1) * TILE;
-  return inCorridor ? "stage" : "title";
+  if (!arch || current === music) {
+    return music;
+  }
+  return centerX(world.hero) >= (arch.column + 1) * TILE ? music : "title";
 }
 
 export function chooseTrack(
@@ -48,9 +52,9 @@ export function chooseTrack(
   if (world.passage > 0) {
     return current;
   }
-  const { boss } = world.room;
-  if (boss) {
-    return bossTrack(boss);
+  const { boss, slot } = world.room;
+  if (slot.kind === "stage") {
+    return stageTrack(world, slot.music, current);
   }
-  return world.room.index === 0 ? entranceTrack(world, current) : "stage";
+  return boss ? bossTrack(boss, slot) : slot.calm;
 }

@@ -6,7 +6,7 @@ import {
   updateBoss,
 } from "../entities/boss";
 import { centerX } from "../entities/enemy";
-import { spawnDrop } from "../entities/items";
+import { spawnReward } from "../entities/items";
 import { burst } from "../entities/particles";
 import { isHostile } from "../entities/projectiles";
 import { type Cue, cue } from "./cues";
@@ -14,6 +14,7 @@ import { announce } from "./notices";
 import type { World } from "./world";
 
 const IMPACT_SPARKS = 6;
+const SHIELD_SPARKS = 8;
 
 const STATE_CUES: Readonly<Partial<Record<Boss["state"], Cue>>> = {
   slash: "slash",
@@ -22,6 +23,12 @@ const STATE_CUES: Readonly<Partial<Record<Boss["state"], Cue>>> = {
   vanish: "vanish",
   appear: "appear",
   call: "call",
+  type: "typing",
+  shield: "shield",
+  exposed: "pop",
+  deploy: "deploy",
+  slam: "windup",
+  bugs: "buzz",
 };
 
 export function clearHostileShots(world: World): void {
@@ -48,12 +55,12 @@ function respond(world: World, boss: Boss, event: BossEvent | null): void {
       announce(world, boss.kind);
       return;
     case "freed":
-      spawnDrop(world.drops, "gc", centerX(boss), boss.y + boss.height / 2);
+      spawnReward(world.drops, "gc", centerX(boss), boss.y + boss.height / 2);
       announce(world, "freed");
       return;
     case "rollback":
       clearHostileShots(world);
-      spawnDrop(world.drops, "gc", centerX(boss), boss.y + boss.height / 2);
+      spawnReward(world.drops, "gc", centerX(boss), boss.y + boss.height / 2);
       announce(world, "rollback");
       cue(world, "rollback");
       return;
@@ -68,6 +75,32 @@ function respond(world: World, boss: Boss, event: BossEvent | null): void {
       return;
     case "finished":
       world.mode = "victory";
+      return;
+    case "absorbed":
+      cue(world, "block");
+      burst(
+        world.particles,
+        world,
+        "shield",
+        centerX(boss),
+        boss.y + boss.height / 2,
+        SHIELD_SPARKS,
+      );
+      return;
+    case "pasted":
+      cue(world, "paste");
+      return;
+    case "unmasked":
+      clearHostileShots(world);
+      dismissSummons(world);
+      spawnReward(
+        world.drops,
+        "readme",
+        centerX(boss),
+        boss.y + boss.height / 2,
+      );
+      announce(world, "unmasked");
+      cue(world, "costume");
       return;
     case null:
       return;
@@ -96,14 +129,17 @@ export function moveBoss(world: World): void {
 }
 
 export function hitBoss(world: World, boss: Boss, damage: number): void {
-  burst(
-    world.particles,
-    world,
-    "impact",
-    centerX(boss),
-    boss.y + boss.height / 2,
-    IMPACT_SPARKS,
-  );
-  respond(world, boss, damageBoss(boss, damage));
-  cue(world, boss.state === "defeat" ? "bossDown" : "bossHit");
+  const event = damageBoss(boss, damage);
+  if (event !== "absorbed") {
+    burst(
+      world.particles,
+      world,
+      "impact",
+      centerX(boss),
+      boss.y + boss.height / 2,
+      IMPACT_SPARKS,
+    );
+    cue(world, boss.state === "defeat" ? "bossDown" : "bossHit");
+  }
+  respond(world, boss, event);
 }

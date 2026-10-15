@@ -1,9 +1,29 @@
-import { LEGACY, SUBWEAPONS, SYNTAX_ERROR, WATCHDOG } from "../balance";
+import {
+  DROP_KNIGHT,
+  LEGACY,
+  MOVEMENT,
+  SUBWEAPONS,
+  SYNTAX_ERROR,
+  VIBE,
+  WATCHDOG,
+} from "../balance";
 import { type Box, hitsSolid, overlaps } from "../core/collision";
 import { type Pooled, claim, createPool } from "../core/pool";
 import type { Level } from "../levels/level";
+import type { Spark } from "./particles";
 
-export type ProjectileKind = "select" | "join" | "glyph" | "beam" | "card";
+export type ProjectileKind =
+  | "select"
+  | "join"
+  | "drop"
+  | "glyph"
+  | "beam"
+  | "card"
+  | "dropAxe"
+  | "code"
+  | "hallucination"
+  | "wave"
+  | "bug";
 
 export interface Projectile extends Box, Pooled {
   kind: ProjectileKind;
@@ -22,12 +42,25 @@ export const PROJECTILE_SIZE: Readonly<
 > = {
   select: { width: 10, height: 4 },
   join: { width: 10, height: 10 },
+  drop: { width: 10, height: 10 },
   glyph: { width: 6, height: 10 },
   beam: { width: 22, height: 6 },
   card: { width: 10, height: 6 },
+  dropAxe: { width: 10, height: 10 },
+  code: { width: 10, height: 8 },
+  hallucination: { width: 10, height: 8 },
+  wave: { width: 14, height: 10 },
+  bug: { width: 8, height: 6 },
 };
 
-const POOL_SIZE = 24;
+export const FADE_SPARKS: Readonly<Partial<Record<ProjectileKind, Spark>>> = {
+  code: "data",
+  hallucination: "data",
+  wave: "ember",
+  bug: "log",
+};
+
+const POOL_SIZE = 32;
 const JOIN_LIFETIME = 150;
 const JOIN_ARC = 0.08;
 const JOIN_HOMING = 0.12;
@@ -55,12 +88,30 @@ export function isHostile(projectile: Projectile): boolean {
   return (
     projectile.kind === "glyph" ||
     projectile.kind === "beam" ||
-    projectile.kind === "card"
+    projectile.kind === "card" ||
+    projectile.kind === "dropAxe" ||
+    projectile.kind === "code" ||
+    projectile.kind === "wave" ||
+    projectile.kind === "bug"
+  );
+}
+
+export function isFriendly(projectile: Projectile): boolean {
+  return (
+    projectile.kind === "select" ||
+    projectile.kind === "join" ||
+    projectile.kind === "drop"
   );
 }
 
 export function isWhippable(projectile: Projectile): boolean {
-  return projectile.kind === "glyph" || projectile.kind === "card";
+  return (
+    projectile.kind === "glyph" ||
+    projectile.kind === "card" ||
+    projectile.kind === "dropAxe" ||
+    projectile.kind === "code" ||
+    projectile.kind === "bug"
+  );
 }
 
 export function countFlying(
@@ -144,11 +195,44 @@ function boomerang(projectile: Projectile, home: Box) {
   }
 }
 
-function arc(projectile: Projectile, level: Level) {
+function arc(projectile: Projectile, level: Level, gravity: number) {
   projectile.x += projectile.vx;
   projectile.y += projectile.vy;
-  projectile.vy += SYNTAX_ERROR.glyphGravity;
+  projectile.vy += gravity;
   if (hitsSolid(level, projectile) || projectile.y > level.height) {
+    projectile.active = false;
+  }
+}
+
+function fade(projectile: Projectile) {
+  projectile.x += projectile.vx;
+  projectile.y += projectile.vy;
+  projectile.vy += VIBE.blockGravity;
+  if (projectile.vy > 0) {
+    projectile.active = false;
+  }
+}
+
+function drop(projectile: Projectile, level: Level) {
+  if (projectile.age <= VIBE.bugWarnFrames) {
+    return;
+  }
+  projectile.vy = Math.min(
+    projectile.vy + VIBE.bugGravity,
+    MOVEMENT.maxFallSpeed,
+  );
+  projectile.y += projectile.vy;
+  if (hitsSolid(level, projectile) || projectile.y > level.height) {
+    projectile.active = false;
+  }
+}
+
+function lob(projectile: Projectile, level: Level) {
+  const { gravity, lifetime } = SUBWEAPONS.drop;
+  projectile.x += projectile.vx;
+  projectile.y += projectile.vy;
+  projectile.vy += gravity;
+  if (projectile.age > lifetime || projectile.y > level.height) {
     projectile.active = false;
   }
 }
@@ -172,8 +256,26 @@ export function moveProjectile(
     case "join":
       boomerang(projectile, home);
       break;
+    case "drop":
+      lob(projectile, level);
+      break;
     case "glyph":
-      arc(projectile, level);
+      arc(projectile, level, SYNTAX_ERROR.glyphGravity);
+      break;
+    case "dropAxe":
+      arc(projectile, level, DROP_KNIGHT.axeGravity);
+      break;
+    case "code":
+      arc(projectile, level, VIBE.blockGravity);
+      break;
+    case "hallucination":
+      fade(projectile);
+      break;
+    case "wave":
+      flyStraight(projectile, level, level.width);
+      break;
+    case "bug":
+      drop(projectile, level);
       break;
   }
 }

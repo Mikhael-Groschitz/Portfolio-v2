@@ -1,11 +1,28 @@
 import { BOSS_MUSIC } from "./music/boss";
 import { DEFEAT_MUSIC, VICTORY_MUSIC } from "./music/endings";
 import { STAGE_MUSIC } from "./music/stage";
+import {
+  CATACOMBS_MUSIC,
+  CRON_MUSIC,
+  LAB_MUSIC,
+  TAPES_MUSIC,
+} from "./music/stages";
 import { TITLE } from "./music/title";
+import { VIBE_MUSIC } from "./music/vibe";
 import { midiOf } from "./notes";
 import type { Note, Part, Score, StopName } from "./score";
 
-export type TrackName = "title" | "stage" | "boss" | "defeat" | "victory";
+export type TrackName =
+  | "title"
+  | "stage"
+  | "catacombs"
+  | "tapes"
+  | "lab"
+  | "cron"
+  | "boss"
+  | "vibe"
+  | "defeat"
+  | "victory";
 
 export interface TrackEvent {
   beat: number;
@@ -61,7 +78,12 @@ export function compile(name: TrackName, score: Score): Track {
 export const SCORES: Readonly<Record<TrackName, Score>> = {
   title: TITLE,
   stage: STAGE_MUSIC,
+  catacombs: CATACOMBS_MUSIC,
+  tapes: TAPES_MUSIC,
+  lab: LAB_MUSIC,
+  cron: CRON_MUSIC,
   boss: BOSS_MUSIC,
+  vibe: VIBE_MUSIC,
   defeat: DEFEAT_MUSIC,
   victory: VICTORY_MUSIC,
 };

@@ -1,4 +1,4 @@
-import { type Level, TERRAIN, TILE, isSolid, terrainAt } from "../levels/level";
+import { type Level, TILE, isLedge, isSolid } from "../levels/level";
 
 export interface Box {
   x: number;
@@ -50,10 +50,9 @@ function landingRow(
   const right = Math.floor((body.x + body.width - EDGE) / TILE);
   const fromAbove = previousBottom <= row * TILE + EDGE;
   for (let column = left; column <= right; column++) {
-    const terrain = terrainAt(level, column, row);
     if (
       isSolid(level, column, row) ||
-      (ledges && terrain === TERRAIN.ledge && fromAbove)
+      (ledges && fromAbove && isLedge(level, column, row))
     ) {
       return row;
     }
@@ -70,18 +69,25 @@ export function standsOnLedge(level: Level, body: Body): boolean {
     if (isSolid(level, column, row)) {
       return false;
     }
-    ledge ||= terrainAt(level, column, row) === TERRAIN.ledge;
+    ledge ||= isLedge(level, column, row);
   }
   return ledge;
 }
 
+export function slide(level: Level, body: Body, dx: number): boolean {
+  body.x += dx;
+  if (dx === 0 || !hitsSolid(level, body)) {
+    return false;
+  }
+  body.x =
+    dx > 0
+      ? Math.floor((body.x + body.width) / TILE) * TILE - body.width
+      : (Math.floor(body.x / TILE) + 1) * TILE;
+  return true;
+}
+
 export function moveBody(level: Level, body: Body, ledges = true): void {
-  body.x += body.vx;
-  if (body.vx !== 0 && hitsSolid(level, body)) {
-    body.x =
-      body.vx > 0
-        ? Math.floor((body.x + body.width) / TILE) * TILE - body.width
-        : (Math.floor(body.x / TILE) + 1) * TILE;
+  if (slide(level, body, body.vx)) {
     body.vx = 0;
   }
   const previousBottom = body.y + body.height;

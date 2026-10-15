@@ -8,7 +8,7 @@ import {
   SUBWEAPONS,
   WHIP,
 } from "../balance";
-import type { Boss } from "../entities/boss";
+import { BOSS_KINDS, type Boss, type BossKind } from "../entities/boss";
 import { type Collector, laneOf } from "../entities/collector";
 import { centerX } from "../entities/enemy";
 import {
@@ -19,14 +19,27 @@ import {
 } from "../entities/hero";
 import type { Legacy } from "../entities/legacy";
 import { launch } from "../entities/projectiles";
+import { parseCampaign } from "../levels/campaign";
 import { TILE } from "../levels/level";
-import { parseStage } from "../levels/stage";
-import { type World, createWorld, skipIntro, startIntro, step } from "./world";
+import {
+  type World,
+  createWorld,
+  hudOf,
+  skipIntro,
+  startIntro,
+  step,
+} from "./world";
 
-const levels = parseStage();
+const rooms = parseCampaign();
 
-function arena(index: 1 | 3, reducedMotion = false): World {
-  const world = createWorld([levels[index]], { reducedMotion, seed: 5 });
+function arena(kind: BossKind, reducedMotion = false): World {
+  const room = rooms.find(
+    ({ slot }) => slot.kind === "boss" && slot.boss === kind,
+  );
+  if (!room) {
+    throw new Error(`The campaign has no ${kind} room`);
+  }
+  const world = createWorld([room], { reducedMotion, seed: 5 });
   startIntro(world);
   skipIntro(world);
   return world;
@@ -56,9 +69,25 @@ function standBeside(world: World, boss: Boss) {
   world.hero.facing = 1;
 }
 
+describe("boss entrances", () => {
+  it("shows every boss's name card while it makes its entrance, then hides it", () => {
+    for (const kind of BOSS_KINDS) {
+      const world = arena(kind);
+      expect(hudOf(world).card, kind).toBe(false);
+      const boss = awaken<Boss>(world, 0);
+      expect(boss.state, kind).toBe("intro");
+      expect(hudOf(world), kind).toMatchObject({ card: true, boss: { kind } });
+      for (let frame = 0; frame < 400 && boss.state === "intro"; frame++) {
+        run(world, 1);
+      }
+      expect(hudOf(world).card, kind).toBe(false);
+    }
+  });
+});
+
 describe("hitting a boss", () => {
   it("lands one whip per lash, and only while the boss can be hit", () => {
-    const world = arena(1);
+    const world = arena("collector");
     const boss = awaken<Collector>(world, 0);
     boss.y = boss.floor - boss.height - 2;
     standBeside(world, boss);
@@ -81,7 +110,7 @@ describe("hitting a boss", () => {
   });
 
   it("stops SELECT at the boss and lets TRUNCATE reach it on screen", () => {
-    const world = arena(3);
+    const world = arena("legacy");
     grantSubweapon(world.hero, "truncate");
     world.hero.energy = 99;
     const boss = awaken<Legacy>(world, LEGACY.introFrames);
@@ -104,7 +133,7 @@ describe("hitting a boss", () => {
 
 describe("boss attacks", () => {
   it("hurts with the DELETE slash low in front, and a jump clears it", () => {
-    const grounded = arena(1);
+    const grounded = arena("collector");
     const boss = awaken<Collector>(grounded, COLLECTOR.introFrames);
     boss.state = "slash";
     boss.timer = COLLECTOR.slashFrames;
@@ -114,7 +143,7 @@ describe("boss attacks", () => {
     run(grounded, 1);
     expect(grounded.hero.ram).toBe(RAM.start + DAMAGE.deleteSlash);
 
-    const airborne = arena(1);
+    const airborne = arena("collector");
     const flying = awaken<Collector>(airborne, COLLECTOR.introFrames);
     airborne.hero.y =
       flying.floor - COLLECTOR.slashHeight - airborne.hero.height - 4;
@@ -130,7 +159,7 @@ describe("boss attacks", () => {
   });
 
   it("sweeps only the marked lanes", () => {
-    const world = arena(1);
+    const world = arena("collector");
     const boss = awaken<Collector>(world, COLLECTOR.introFrames);
     boss.state = "sweep";
     boss.timer = COLLECTOR.sweepFrames;
@@ -147,7 +176,7 @@ describe("boss attacks", () => {
   });
 
   it("throws punched cards that the whip can knock down", () => {
-    const world = arena(3);
+    const world = arena("legacy");
     awaken<Legacy>(world, 0);
     const { hero } = world;
     launch(world.projectiles, {
@@ -168,7 +197,7 @@ describe("boss attacks", () => {
   });
 
   it("shakes the floor when the dive lands", () => {
-    const world = arena(3);
+    const world = arena("legacy");
     const boss = awaken<Legacy>(world, LEGACY.introFrames);
     boss.state = "dive";
     boss.seated = false;
@@ -210,7 +239,7 @@ function chase(world: World, frames: number): number {
 
 describe("fights", () => {
   it("a whipping Admin beats the Garbage Collector in under a minute", () => {
-    const world = arena(1);
+    const world = arena("collector");
     awaken<Collector>(world, 0);
     const frames = chase(world, 60 * 60);
     expect(world.room.boss?.state).toBe("gone");
@@ -218,7 +247,7 @@ describe("fights", () => {
   });
 
   it("a whipping Admin beats the Legacy System, rollback included, in under two minutes", () => {
-    const world = arena(3);
+    const world = arena("legacy");
     awaken<Legacy>(world, 0);
     const frames = chase(world, 120 * 60);
     expect(world.mode).toBe("victory");

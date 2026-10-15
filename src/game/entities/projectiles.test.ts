@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { SUBWEAPONS, WATCHDOG } from "../balance";
+import { DROP_KNIGHT, SUBWEAPONS, VIBE, WATCHDOG } from "../balance";
 import { TILE, parseLevel } from "../levels/level";
 import {
+  FADE_SPARKS,
   type Launch,
+  PROJECTILE_SIZE,
+  type ProjectileKind,
   countFlying,
   createProjectiles,
+  isFriendly,
   isHostile,
+  isWhippable,
   launch,
   moveProjectile,
 } from "./projectiles";
@@ -116,6 +121,150 @@ describe("projectiles", () => {
       }
     }
     expect(beam?.x).toBeCloseTo(20 * TILE - 20 * WATCHDOG.beamSpeed);
+  });
+
+  it("lob DROP up and over walls until it falls out of the room or runs out", () => {
+    const projectiles = createProjectiles();
+    const axe = launch(
+      projectiles,
+      shot({
+        kind: "drop",
+        vx: SUBWEAPONS.drop.speed,
+        vy: -SUBWEAPONS.drop.lift,
+      }),
+    );
+    if (!axe) {
+      throw new Error("The pool should have room");
+    }
+    const start = axe.y;
+    moveProjectile(axe, ROOM, FAR);
+    expect(axe.y).toBeLessThan(start);
+    axe.x = 0;
+    axe.y = 3 * TILE;
+    moveProjectile(axe, ROOM, FAR);
+    expect(axe.active).toBe(true);
+    let frames = 0;
+    while (axe.active) {
+      moveProjectile(axe, ROOM, FAR);
+      frames += 1;
+    }
+    expect(frames).toBeLessThanOrEqual(SUBWEAPONS.drop.lifetime);
+    expect(isHostile(axe)).toBe(false);
+  });
+
+  it("let the knight axes hurt the Admin, break on walls and fall to the whip", () => {
+    const projectiles = createProjectiles();
+    const axe = launch(
+      projectiles,
+      shot({
+        kind: "dropAxe",
+        vx: -DROP_KNIGHT.lowAxe.speed,
+        vy: -DROP_KNIGHT.lowAxe.lift,
+        facing: -1,
+      }),
+    );
+    if (!axe) {
+      throw new Error("The pool should have room");
+    }
+    expect(isHostile(axe)).toBe(true);
+    expect(isWhippable(axe)).toBe(true);
+    while (axe.active) {
+      moveProjectile(axe, ROOM, FAR);
+    }
+    expect(axe.y).toBeLessThan(ROOM.height);
+  });
+
+  it("sort every shot into the Admin's, the enemies' or harmless ones", () => {
+    const kinds = Object.keys(PROJECTILE_SIZE) as ProjectileKind[];
+    const projectiles = createProjectiles();
+    const sides = kinds.map((kind) => {
+      const projectile = launch(projectiles, shot({ kind }));
+      if (!projectile) {
+        throw new Error("The pool should have room");
+      }
+      return [kind, isFriendly(projectile), isHostile(projectile)] as const;
+    });
+    expect(
+      sides.filter(([, friendly, hostile]) => friendly && hostile),
+    ).toEqual([]);
+    expect(
+      sides.filter(([, friendly, hostile]) => !friendly && !hostile),
+    ).toEqual([["hallucination", false, false]]);
+    expect(
+      sides.filter(([, friendly]) => friendly).map(([kind]) => kind),
+    ).toEqual(["select", "join", "drop"]);
+  });
+
+  it("throw code blocks in an arc that breaks on the floor, and fade hallucinations at the top", () => {
+    const projectiles = createProjectiles();
+    const lift = { y: 5 * TILE, vx: 1, vy: -VIBE.blockLift };
+    const code = launch(projectiles, shot({ kind: "code", ...lift }));
+    const ghost = launch(projectiles, shot({ kind: "hallucination", ...lift }));
+    if (!code || !ghost) {
+      throw new Error("The pool should have room");
+    }
+    expect(isWhippable(code)).toBe(true);
+    expect(isWhippable(ghost)).toBe(false);
+    let peak = code.y;
+    while (ghost.active) {
+      moveProjectile(code, ROOM, FAR);
+      moveProjectile(ghost, ROOM, FAR);
+      peak = Math.min(peak, code.y);
+    }
+    expect(ghost.vy).toBeGreaterThan(0);
+    expect(code.active).toBe(true);
+    while (code.active) {
+      moveProjectile(code, ROOM, FAR);
+    }
+    expect(code.y + code.height).toBeGreaterThan(ROOM.height - 2 * TILE);
+    expect(code.y).toBeLessThan(ROOM.height);
+    expect(peak).toBeLessThan(5 * TILE - 2 * TILE);
+    expect(FADE_SPARKS.code).toBe("data");
+    expect(FADE_SPARKS.hallucination).toBe("data");
+  });
+
+  it("roll the floor wave until it hits a wall", () => {
+    const projectiles = createProjectiles();
+    const floor = ROOM.height - TILE;
+    const wave = launch(
+      projectiles,
+      shot({
+        kind: "wave",
+        x: 10 * TILE,
+        y: floor - PROJECTILE_SIZE.wave.height,
+        vx: -VIBE.waveSpeed,
+        facing: -1,
+      }),
+    );
+    if (!wave) {
+      throw new Error("The pool should have room");
+    }
+    expect(isWhippable(wave)).toBe(false);
+    while (wave.active) {
+      moveProjectile(wave, ROOM, FAR);
+      expect(wave.y + wave.height).toBe(floor);
+    }
+    expect(wave.x).toBeLessThan(TILE);
+    expect(wave.x).toBeGreaterThanOrEqual(TILE - VIBE.waveSpeed);
+  });
+
+  it("hang bugs under the ceiling for a while before they fall", () => {
+    const projectiles = createProjectiles();
+    const bug = launch(projectiles, shot({ kind: "bug", y: TILE }));
+    if (!bug) {
+      throw new Error("The pool should have room");
+    }
+    for (let frame = 0; frame < VIBE.bugWarnFrames; frame++) {
+      moveProjectile(bug, ROOM, FAR);
+    }
+    expect(bug.y).toBe(TILE);
+    moveProjectile(bug, ROOM, FAR);
+    expect(bug.y).toBeGreaterThan(TILE);
+    while (bug.active) {
+      moveProjectile(bug, ROOM, FAR);
+    }
+    expect(bug.y + bug.height).toBeGreaterThan(ROOM.height - TILE);
+    expect(isWhippable(bug)).toBe(true);
   });
 
   it("reuse a fixed pool and refuse shots when it is full", () => {

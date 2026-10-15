@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { SYNTAX_ERROR, WATCHDOG } from "../balance";
 import { TILE, parseLevel } from "../levels/level";
 import {
-  ENEMY_SIZE,
+  ENEMY_TRAITS,
   createEnemies,
   damageEnemy,
   isFree,
@@ -25,7 +25,8 @@ describe("enemies", () => {
       kind: "syntaxError",
       health: SYNTAX_ERROR.health,
       state: "patrol",
-      ...ENEMY_SIZE.syntaxError,
+      width: ENEMY_TRAITS.syntaxError.width,
+      height: ENEMY_TRAITS.syntaxError.height,
     });
     expect(syntaxError.y + syntaxError.height).toBe(4 * TILE);
     expect(watchdog).toMatchObject({

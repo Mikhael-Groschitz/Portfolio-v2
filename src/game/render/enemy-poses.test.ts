@@ -1,21 +1,35 @@
 import { describe, expect, it } from "vitest";
-import { ENEMY_DYING_FRAMES, SYNTAX_ERROR, WATCHDOG } from "../balance";
+import {
+  DROP_KNIGHT,
+  ENEMY_DYING_FRAMES,
+  SYNTAX_ERROR,
+  WATCHDOG,
+} from "../balance";
 import { createEnemies } from "../entities/enemy";
 import { createHero } from "../entities/hero";
 import { headLine } from "../entities/watchdog";
 import { parseLevel } from "../levels/level";
+import { KNIGHT_WALK } from "./drop-knight-art";
 import { CHARGE_KEYS, MARCH, SYNTAX_ERROR_COLLAPSE } from "./enemy-art";
 import {
   BLINK_FRAMES,
   BLINK_PERIOD,
+  COLLAPSE_HEIGHT,
+  KNIGHT_STEP_PIXELS,
   MARCH_PIXELS,
+  SHAMBLE_PIXELS,
   SQUIGGLE_FRAMES,
   THROW_FRAMES,
+  collapseHeight,
   collapseStage,
+  knightPose,
   squigglePhase,
   syntaxErrorPose,
   watchdogPose,
+  zombiePose,
+  zombieRows,
 } from "./enemy-poses";
+import { SHAMBLE, ZOMBIE_FRAME } from "./zombie-art";
 
 const ROOM = parseLevel([
   "####################",
@@ -126,5 +140,71 @@ describe("Watchdog poses", () => {
     expect([...stages]).toEqual(CHARGE_KEYS);
     watchdog.hurt = 2;
     expect(watchdogPose(watchdog, hero, 0, false)).toBe("hurt");
+  });
+});
+
+const MOBS = parseLevel([
+  "####################",
+  "#                  #",
+  "#S   z     k      E#",
+  "####################",
+]);
+
+describe("Zombie Process poses", () => {
+  it("drags its feet through two poses and flinches when hit", () => {
+    const [zombie] = createEnemies(MOBS);
+    const poses = SHAMBLE.map((_, step) => {
+      zombie.x = step * SHAMBLE_PIXELS;
+      return zombiePose(zombie);
+    });
+    expect(poses).toEqual(SHAMBLE);
+    zombie.hurt = 2;
+    expect(zombiePose(zombie)).toBe("hurt");
+  });
+
+  it("shows only what is above the floor while rising and sinking", () => {
+    const [zombie] = createEnemies(MOBS);
+    expect(zombieRows(zombie)).toBe(ZOMBIE_FRAME.height);
+    zombie.height = 10;
+    expect(zombieRows(zombie)).toBe(10 + ZOMBIE_FRAME.top);
+    zombie.height = 22;
+    zombie.alive = false;
+    zombie.dying = ENEMY_DYING_FRAMES / 2;
+    expect(zombieRows(zombie)).toBe(ZOMBIE_FRAME.height / 2);
+    zombie.dying = 0;
+    expect(zombieRows(zombie)).toBe(0);
+  });
+});
+
+describe("DROP Knight poses", () => {
+  it("walks through four poses, raises the axe and throws it", () => {
+    const [, knight] = createEnemies(MOBS);
+    const poses = KNIGHT_WALK.map((_, step) => {
+      knight.x = step * KNIGHT_STEP_PIXELS;
+      return knightPose(knight);
+    });
+    expect(poses).toEqual(KNIGHT_WALK);
+    knight.state = "windup";
+    expect(knightPose(knight)).toBe("windup");
+    knight.state = "throw";
+    expect(knightPose(knight)).toBe("throw");
+  });
+
+  it("shows empty hands for a while after a throw, then the axe again", () => {
+    const [, knight] = createEnemies(MOBS);
+    knight.cooldown = DROP_KNIGHT.cooldownFrames;
+    expect(knightPose(knight)).toBe("empty");
+    knight.cooldown = DROP_KNIGHT.cooldownFrames / 2;
+    expect(knightPose(knight)).not.toBe("empty");
+    knight.hurt = 1;
+    expect(knightPose(knight)).toBe("hurt");
+  });
+
+  it("collapses to under a third of its height as it falls", () => {
+    const [, knight] = createEnemies(MOBS);
+    expect(collapseHeight(knight)).toBe(1);
+    knight.alive = false;
+    knight.dying = 0;
+    expect(collapseHeight(knight)).toBeCloseTo(COLLAPSE_HEIGHT);
   });
 });

@@ -4,6 +4,7 @@ import {
   type World,
   introProgress,
   isOpen,
+  isSaved,
   passageProgress,
 } from "../core/world";
 import { heroPose, lashReach } from "../entities/hero";
@@ -18,8 +19,8 @@ import {
   TOWER_LAYER,
 } from "./backdrop";
 import { quakeOffset } from "./boss-poses";
-import { drawBoss, drawThroneReels } from "./bosses";
-import { DOOR_LOCK } from "./castle-art";
+import { drawBoss, drawStage, drawThroneReels } from "./bosses";
+import { DOOR_LOCK, SAVEPOINT_SCREEN_AT } from "./castle-art";
 import {
   drawEnemies,
   drawItems,
@@ -29,6 +30,7 @@ import {
 } from "./entities";
 import { BEACON, LED, heroAlpha, lit } from "./flicker";
 import { HERO_FRAME, LASH_HAND, frameTop, heroFrame } from "./hero-art";
+import { drawMechanisms } from "./mechanisms";
 
 const TITLE_TOP = 18;
 const FOG_ALPHA = 0.35;
@@ -79,14 +81,15 @@ function drawBackdrop(
   drawLayer(context, art.towers, TOWER_LAYER, cameraX, cameraY);
   const towersTop = shift(TOWER_LAYER.top, cameraY, TOWER_LAYER.depthY);
   const towersLeft = shift(0, cameraX, TOWER_LAYER.depthX);
-  art.towerLights.forEach((light, index) => {
+  for (let index = 0; index < art.towerLights.length; index++) {
+    const light = art.towerLights[index];
     const on = reducedMotion || lit(frame, index * 37, BEACON);
     context.fillStyle = on ? COLORS.led : COLORS.ledOff;
     const x =
       (((light.x + towersLeft) % art.towers.width) + art.towers.width) %
       art.towers.width;
     context.fillRect(x, towersTop + light.y, 1, 1);
-  });
+  }
   context.globalAlpha = FOG_ALPHA;
   drawLayer(
     context,
@@ -173,6 +176,26 @@ function drawDoors(
   if (room.exit) {
     const color = isOpen(world.room) ? COLORS.comment : COLORS.led;
     drawLock(context, room.exit, color, cameraX, cameraY);
+  }
+}
+
+function drawSavepoints(
+  context: CanvasRenderingContext2D,
+  world: World,
+  art: Art,
+  room: RoomArt,
+  cameraX: number,
+  cameraY: number,
+) {
+  for (let mark = 0; mark < room.savepoints.length; mark++) {
+    if (isSaved(world, world.room, mark)) {
+      const spot = room.savepoints[mark];
+      context.drawImage(
+        art.savepointScreen,
+        spot.x + SAVEPOINT_SCREEN_AT.x - cameraX,
+        spot.y + SAVEPOINT_SCREEN_AT.y - cameraY,
+      );
+    }
   }
 }
 
@@ -271,7 +294,7 @@ export function render(
   world: World,
   art: Art,
 ): void {
-  const room = art.rooms[world.room.index];
+  const room = art.room(world.room.index);
   const cameraX = Math.round(world.camera.x);
   const cameraY =
     Math.round(world.camera.y) + quakeOffset(world.quake, world.reducedMotion);
@@ -283,8 +306,11 @@ export function render(
     context.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
   }
   drawLevel(context, world, room, cameraX, cameraY);
+  drawMechanisms(context, world, art, room, cameraX, cameraY);
   drawDoors(context, world, room, cameraX, cameraY);
+  drawSavepoints(context, world, art, room, cameraX, cameraY);
   drawThroneReels(context, world, art, room, cameraX, cameraY);
+  drawStage(context, world, art, room, cameraX, cameraY);
   drawItems(context, world, art, cameraX, cameraY);
   drawBoss(context, world, art, cameraX, cameraY);
   drawEnemies(context, world, art, cameraX, cameraY);

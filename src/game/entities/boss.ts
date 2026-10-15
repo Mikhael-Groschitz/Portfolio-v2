@@ -1,5 +1,5 @@
-import { COLLECTOR, DAMAGE, LEGACY } from "../balance";
-import type { Level } from "../levels/level";
+import { COLLECTOR, DAMAGE, LEGACY, VIBE } from "../balance";
+import type { Cell, Level, Place } from "../levels/level";
 import {
   type Collector,
   createCollector,
@@ -20,13 +20,31 @@ import {
 } from "./legacy";
 import type { Particle } from "./particles";
 import type { Projectile } from "./projectiles";
+import {
+  type Vibe,
+  type VibeLine,
+  createVibe,
+  damageVibe,
+  isVibeVulnerable,
+  resetVibe,
+  updateVibe,
+  vibeLine,
+} from "./vibe";
 
-export type Boss = Collector | Legacy;
+export type Boss = Vibe | Collector | Legacy;
 
 export type BossKind = Boss["kind"];
 
 export type BossEvent =
-  "awake" | "freed" | "rollback" | "committed" | "landing" | "finished";
+  | "awake"
+  | "freed"
+  | "rollback"
+  | "committed"
+  | "landing"
+  | "finished"
+  | "absorbed"
+  | "pasted"
+  | "unmasked";
 
 export interface BossSurroundings {
   room: { level: Level; enemies: readonly Enemy[] };
@@ -36,56 +54,125 @@ export interface BossSurroundings {
   seed: number;
 }
 
-export const BOSS_HEALTH: Readonly<Record<BossKind, number>> = {
-  collector: COLLECTOR.health,
-  legacy: LEGACY.health,
+interface BossBehavior<B extends Boss> {
+  place: Place;
+  health: number;
+  create: (home: Cell, level: Level) => B;
+  reset: (boss: B) => void;
+  update: (boss: B, surroundings: BossSurroundings) => BossEvent | null;
+  isVulnerable: (boss: B) => boolean;
+  damage: (boss: B, amount: number) => BossEvent | null;
+  touchDamage: (boss: B) => number;
+  line: (boss: B) => VibeLine | null;
+  said: (boss: B) => number;
+  card: (boss: B) => boolean;
+}
+
+const BEHAVIORS: {
+  readonly [K in BossKind]: BossBehavior<Extract<Boss, { kind: K }>>;
+} = {
+  vibe: {
+    place: "vibe",
+    health: VIBE.health,
+    create: createVibe,
+    reset: resetVibe,
+    update: updateVibe,
+    isVulnerable: isVibeVulnerable,
+    damage: damageVibe,
+    touchDamage: () => DAMAGE.vibe,
+    line: vibeLine,
+    said: (boss) => boss.said,
+    card: (boss) => boss.state === "intro",
+  },
+  collector: {
+    place: "collector",
+    health: COLLECTOR.health,
+    create: createCollector,
+    reset: resetCollector,
+    update: updateCollector,
+    isVulnerable: isCollectorVulnerable,
+    damage: (boss, amount) => {
+      damageCollector(boss, amount);
+      return null;
+    },
+    touchDamage: () => DAMAGE.collector,
+    line: () => null,
+    said: () => 0,
+    card: (boss) => boss.state === "intro",
+  },
+  legacy: {
+    place: "throne",
+    health: LEGACY.health,
+    create: createLegacy,
+    reset: resetLegacy,
+    update: updateLegacy,
+    isVulnerable: isLegacyVulnerable,
+    damage: damageLegacy,
+    touchDamage: (boss) =>
+      boss.state === "dive" ? DAMAGE.dive : DAMAGE.legacy,
+    line: () => null,
+    said: () => 0,
+    card: (boss) => boss.state === "intro",
+  },
 };
 
+export const BOSS_KINDS = Object.keys(BEHAVIORS) as readonly BossKind[];
+
+export const BOSS_HEALTH = Object.fromEntries(
+  BOSS_KINDS.map((kind) => [kind, BEHAVIORS[kind].health]),
+) as Readonly<Record<BossKind, number>>;
+
+function behaviorOf(boss: Boss): BossBehavior<Boss> {
+  return BEHAVIORS[boss.kind] as unknown as BossBehavior<Boss>;
+}
+
+export function bossPlace(kind: BossKind): Place {
+  return BEHAVIORS[kind].place;
+}
+
 export function createBoss(level: Level): Boss | null {
-  const [collector] = level.places.collector;
-  if (collector) {
-    return createCollector(collector, level);
+  for (const kind of BOSS_KINDS) {
+    const [home] = level.places[bossPlace(kind)];
+    if (home) {
+      return BEHAVIORS[kind].create(home, level);
+    }
   }
-  const [throne] = level.places.throne;
-  return throne ? createLegacy(throne, level) : null;
+  return null;
 }
 
 export function resetBoss(boss: Boss): void {
-  if (boss.kind === "collector") {
-    resetCollector(boss);
-  } else {
-    resetLegacy(boss);
-  }
+  behaviorOf(boss).reset(boss);
 }
 
 export function updateBoss(
   boss: Boss,
   surroundings: BossSurroundings,
 ): BossEvent | null {
-  return boss.kind === "collector"
-    ? updateCollector(boss, surroundings)
-    : updateLegacy(boss, surroundings);
+  return behaviorOf(boss).update(boss, surroundings);
 }
 
 export function isVulnerable(boss: Boss): boolean {
-  return boss.kind === "collector"
-    ? isCollectorVulnerable(boss)
-    : isLegacyVulnerable(boss);
+  return behaviorOf(boss).isVulnerable(boss);
 }
 
 export function damageBoss(boss: Boss, amount: number): BossEvent | null {
-  if (boss.kind === "collector") {
-    damageCollector(boss, amount);
-    return null;
-  }
-  return damageLegacy(boss, amount);
+  return behaviorOf(boss).damage(boss, amount);
 }
 
 export function touchDamage(boss: Boss): number {
-  if (boss.kind === "collector") {
-    return DAMAGE.collector;
-  }
-  return boss.state === "dive" ? DAMAGE.dive : DAMAGE.legacy;
+  return behaviorOf(boss).touchDamage(boss);
+}
+
+export function bossLine(boss: Boss): VibeLine | null {
+  return behaviorOf(boss).line(boss);
+}
+
+export function linesSaid(boss: Boss): number {
+  return behaviorOf(boss).said(boss);
+}
+
+export function showsCard(boss: Boss): boolean {
+  return behaviorOf(boss).card(boss);
 }
 
 export function isFighting(boss: Boss): boolean {

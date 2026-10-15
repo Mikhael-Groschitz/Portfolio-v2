@@ -5,15 +5,25 @@ import {
   COLLECTOR,
   LEGACY,
   QUAKE_FRAMES,
+  VIBE,
 } from "../balance";
 import { createCollector, damageCollector } from "../entities/collector";
+import { centerX } from "../entities/enemy";
 import { createLegacy } from "../entities/legacy";
+import { type Vibe, type VibeState, createVibe } from "../entities/vibe";
 import { parseLevel } from "../levels/level";
 import {
+  BRACE_POP_FRAMES,
+  COSTUME_FRAMES,
   FLOAT_FRAMES,
   MARK_PULSE_FRAMES,
+  STRIDE_STEP,
+  TYPING_FRAMES,
+  braceAlpha,
+  braceSpread,
   collectorPose,
   collectorPresence,
+  costumeFlight,
   crumbleStage,
   isGlowing,
   legacyCommand,
@@ -23,6 +33,9 @@ import {
   markAlpha,
   quakeOffset,
   reelStep,
+  speakerSpot,
+  vibePose,
+  vibePresence,
 } from "./boss-poses";
 import { COLLECTOR_CRUMBLE } from "./collector-art";
 import { REEL_FRAMES } from "./legacy-art";
@@ -43,6 +56,114 @@ function legacy() {
   const [seat] = ROOM.places.throne;
   return createLegacy(seat, ROOM);
 }
+
+const STAGE = parseLevel(["############", "#S       V #", "############"]);
+
+function vibe(state: VibeState, timer = 0): Vibe {
+  const [home] = STAGE.places.vibe;
+  const boss = createVibe(home, STAGE);
+  boss.state = state;
+  boss.timer = timer;
+  return boss;
+}
+
+describe("Vibe Coder poses", () => {
+  it("struts while it walks and flinches when hit", () => {
+    const boss = vibe("walk");
+    expect(vibePose(boss, 0, false)).toBe("walk1");
+    boss.stride = STRIDE_STEP;
+    expect(vibePose(boss, 0, false)).toBe("walk2");
+    boss.hurt = BOSS_HURT_FRAMES;
+    expect(vibePose(boss, 0, false)).toBe("hurt");
+  });
+
+  it("types in two frames, and holds one with reduced motion", () => {
+    const boss = vibe("type");
+    expect(vibePose(boss, 0, false)).toBe("type1");
+    expect(vibePose(boss, TYPING_FRAMES, false)).toBe("type2");
+    expect(vibePose(boss, TYPING_FRAMES, true)).toBe("type1");
+  });
+
+  it("shows every act with its own pose, even when hit", () => {
+    const acts: [VibeState, string][] = [
+      ["dormant", "idle"],
+      ["intro", "idle"],
+      ["throw", "throw"],
+      ["copy", "raise"],
+      ["shield", "shield"],
+      ["exposed", "exposed"],
+      ["deploy", "deploy"],
+      ["bugs", "deploy"],
+      ["slam", "lift"],
+      ["land", "land"],
+    ];
+    for (const [state, pose] of acts) {
+      const boss = vibe(state);
+      expect(vibePose(boss, 0, false)).toBe(pose);
+      boss.hurt = BOSS_HURT_FRAMES;
+      expect(vibePose(boss, 0, false)).toBe(
+        state === "exposed" ? "hurt" : pose,
+      );
+    }
+  });
+
+  it("stands unmasked, then runs off and fades out", () => {
+    const boss = vibe("defeat", VIBE.defeatFrames);
+    expect(vibePose(boss, 0, false)).toBe("unmasked");
+    expect(vibePresence(boss)).toBe(1);
+    boss.timer = VIBE.fleeFrames;
+    expect(vibePose(boss, 0, false)).toBe("flee1");
+    boss.stride = STRIDE_STEP;
+    expect(vibePose(boss, 0, false)).toBe("flee2");
+    boss.timer = VIBE.fleeFrames / 2;
+    expect(vibePresence(boss)).toBe(0.5);
+    expect(vibePresence(vibe("gone"))).toBe(0);
+    expect(vibePresence(vibe("walk"))).toBe(1);
+  });
+
+  it("throws the costume off for a moment, but not with reduced motion", () => {
+    const boss = vibe("defeat", VIBE.defeatFrames);
+    expect(costumeFlight(boss, false)).toBe(0);
+    boss.timer = VIBE.defeatFrames - COSTUME_FRAMES + 1;
+    expect(costumeFlight(boss, false)).toBe(COSTUME_FRAMES - 1);
+    boss.timer -= 1;
+    expect(costumeFlight(boss, false)).toBe(-1);
+    expect(costumeFlight(vibe("defeat", VIBE.defeatFrames), true)).toBe(-1);
+    expect(costumeFlight(vibe("walk"), false)).toBe(-1);
+  });
+
+  it("bounces the braces on a blocked hit and pops them when the shield ends", () => {
+    const shield = vibe("shield", VIBE.shieldFrames);
+    expect(braceSpread(shield, false)).toBe(0);
+    shield.absorbed = VIBE.absorbFrames;
+    expect(braceSpread(shield, false)).toBeGreaterThan(0);
+    expect(braceSpread(shield, true)).toBe(0);
+    expect(braceAlpha(shield)).toBe(1);
+    const exposed = vibe("exposed", VIBE.exposedFrames);
+    const opened = braceSpread(exposed, false);
+    expect(opened).toBeGreaterThan(0);
+    exposed.timer -= 1;
+    expect(braceSpread(exposed, false)).toBeGreaterThan(opened);
+    expect(braceAlpha(exposed)).toBeLessThan(1);
+    exposed.timer = VIBE.exposedFrames - BRACE_POP_FRAMES;
+    expect(braceSpread(exposed, false)).toBe(-1);
+    expect(braceSpread(vibe("exposed", VIBE.exposedFrames), true)).toBe(-1);
+    expect(braceSpread(vibe("walk"), false)).toBe(-1);
+  });
+
+  it("anchors the speech above the head while a line is on", () => {
+    const camera = { x: 10, y: 4 };
+    const spot = { x: 0, y: 0 };
+    const boss = vibe("walk");
+    expect(speakerSpot(null, camera, spot)).toBe(false);
+    expect(speakerSpot(boss, camera, spot)).toBe(false);
+    boss.line = "exposed";
+    boss.lineFrames = VIBE.lineFrames;
+    expect(speakerSpot(boss, camera, spot)).toBe(true);
+    expect(spot.x).toBe(Math.round(centerX(boss) - camera.x));
+    expect(spot.y).toBeLessThan(boss.y - camera.y);
+  });
+});
 
 describe("Garbage Collector poses", () => {
   it("sways its cloak while it floats, and holds still with reduced motion", () => {

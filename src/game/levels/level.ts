@@ -5,6 +5,11 @@ export const TERRAIN = {
   stone: 1,
   rack: 2,
   ledge: 3,
+  sector: 4,
+  beltLeft: 5,
+  beltRight: 6,
+  cronA: 7,
+  cronB: 8,
 } as const;
 
 export type Terrain = (typeof TERRAIN)[keyof typeof TERRAIN];
@@ -19,7 +24,26 @@ const TERRAIN_SYMBOLS: Readonly<Record<string, Terrain>> = {
   "#": TERRAIN.stone,
   R: TERRAIN.rack,
   "=": TERRAIN.ledge,
+  "%": TERRAIN.sector,
+  "<": TERRAIN.beltLeft,
+  ">": TERRAIN.beltRight,
+  "-": TERRAIN.cronA,
+  _: TERRAIN.cronB,
 };
+
+const SOLID: ReadonlySet<Terrain> = new Set([
+  TERRAIN.stone,
+  TERRAIN.rack,
+  TERRAIN.sector,
+  TERRAIN.beltLeft,
+  TERRAIN.beltRight,
+]);
+
+const LEDGES: ReadonlySet<Terrain> = new Set([
+  TERRAIN.ledge,
+  TERRAIN.cronA,
+  TERRAIN.cronB,
+]);
 
 const MARKERS = {
   S: "start",
@@ -32,13 +56,32 @@ const MARKERS = {
   L: "log",
   x: "syntaxError",
   o: "watchdog",
+  z: "zombie",
+  k: "dropKnight",
   f: "disk",
   u: "pen",
+  r: "tape",
   j: "join",
   t: "truncate",
+  d: "drop",
+  w: "firewall",
+  i: "index",
+  c: "cache",
+  b: "backup",
+  m: "readme",
+  "|": "beam",
+  N: "niche",
+  Y: "shelf",
+  M: "bench",
+  O: "clock",
+  Q: "gear",
+  V: "vibe",
   B: "collector",
   T: "throne",
   s: "summon",
+  p: "paste",
+  P: "screen",
+  H: "spotlight",
 } as const;
 
 export type Place = (typeof MARKERS)[keyof typeof MARKERS];
@@ -48,7 +91,7 @@ export interface Level {
   rows: number;
   width: number;
   height: number;
-  terrain: readonly Terrain[];
+  terrain: Terrain[];
   start: Cell;
   exit: Cell | null;
   gate: Cell | null;
@@ -121,6 +164,7 @@ export function parseLevel(
       }
     });
   });
+  optional(places.vibe, "V");
   optional(places.collector, "B");
   optional(places.throne, "T");
   return {
@@ -147,16 +191,25 @@ export function terrainAt(level: Level, column: number, row: number): Terrain {
   return level.terrain[row * level.columns + column];
 }
 
+export function setTerrain(
+  level: Level,
+  column: number,
+  row: number,
+  terrain: Terrain,
+): void {
+  level.terrain[row * level.columns + column] = terrain;
+}
+
 export function isSolid(level: Level, column: number, row: number): boolean {
-  const terrain = terrainAt(level, column, row);
-  return terrain === TERRAIN.stone || terrain === TERRAIN.rack;
+  return SOLID.has(terrainAt(level, column, row));
+}
+
+export function isLedge(level: Level, column: number, row: number): boolean {
+  return LEDGES.has(terrainAt(level, column, row));
 }
 
 export function isFloor(level: Level, column: number, row: number): boolean {
-  return (
-    isSolid(level, column, row) ||
-    terrainAt(level, column, row) === TERRAIN.ledge
-  );
+  return isSolid(level, column, row) || isLedge(level, column, row);
 }
 
 export function isIndoors(level: Level, column: number): boolean {

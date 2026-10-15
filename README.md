@@ -53,6 +53,17 @@ Sem elas o site funciona normalmente, só a viagem fica fora do ar.
 - `src/app`: as rotas, com o português na raiz e o inglês em `/en`
 - `src/proxy.ts`: escolhe o idioma na primeira visita
 
+## O mini jogo
+
+O Symphony of the Database é uma campanha de seis fases e três chefes, e quase tudo nele é dado. Os números ficam todos em `src/game/balance.ts`.
+
+- **Fase:** o mapa é uma lista de textos em `src/game/levels/rooms.ts`, um caractere por bloco (`#` pedra, `=` ressalto, `%` setor que cai, `<` e `>` esteiras, `-` e `_` plataformas agendadas, `|` feixe de teste, letras para inimigos e itens; a lista completa está em `levels/level.ts`). Depois é só pôr a fase em `CAMPAIGN`, no `levels/campaign.ts`, com a música e os reforços. A cor das paredes de cada fase fica em `render/stage-art.ts`
+- **Inimigo:** uma entrada em `ENEMY_TRAITS` (`entities/enemy.ts`) com tamanho, vida e dano, o comportamento num arquivo próprio em `entities/` registrado em `ENEMY_UPDATES` (`core/world.ts`) e o desenho em `ENEMY_DRAWERS` (`render/entities.ts`)
+- **Item:** o tipo e o efeito em `entities/items.ts`, a letra do mapa em `levels/level.ts`, a arte em `render/item-art.ts` e o aviso que aparece ao pegar em `ui/texts.ts`
+- **Chefe:** a máquina de estados num arquivo em `entities/`, registrada em `BEHAVIORS` (`entities/boss.ts`), e o desenho em `render/bosses.ts`
+
+Os testes conferem os mapas: a saída e todos os itens precisam ser alcançáveis com o pulo do Admin, nenhum item pode ficar encostado em parede ou plataforma, e não pode existir buraco sem volta. Com `npm run dev`, a tecla F9 abre um painel para pular de fase, ligar RAM infinita e abrir uma sala de teste. Esse painel não vai para o build de produção.
+
 ## Publicação
 
 - Antes de publicar, rodo `npm run lint`, `npm run typecheck`, `npm run test` e `npm run build`

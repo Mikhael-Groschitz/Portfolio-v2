@@ -1,4 +1,9 @@
-import { ENEMY_DYING_FRAMES, SYNTAX_ERROR, WATCHDOG } from "../balance";
+import {
+  DROP_KNIGHT,
+  ENEMY_DYING_FRAMES,
+  SYNTAX_ERROR,
+  WATCHDOG,
+} from "../balance";
 import type { Enemy } from "../entities/enemy";
 import type { Hero } from "../entities/hero";
 import { headLine } from "../entities/watchdog";
@@ -11,8 +16,13 @@ import {
   type SyntaxErrorPose,
   watchdogKey,
 } from "./enemy-art";
+import { type DropKnightPose, KNIGHT_WALK } from "./drop-knight-art";
+import { SHAMBLE, ZOMBIE_FRAME, type ZombiePose } from "./zombie-art";
 
 export const MARCH_PIXELS = 4;
+export const SHAMBLE_PIXELS = 4;
+export const KNIGHT_STEP_PIXELS = 4;
+export const COLLAPSE_HEIGHT = 0.3;
 export const THROW_FRAMES = 12;
 export const SQUIGGLE_FRAMES = 12;
 export const BLINK_PERIOD = 220;
@@ -34,6 +44,43 @@ export function syntaxErrorPose(enemy: Enemy): SyntaxErrorPose {
     return sinceThrow < THROW_FRAMES / 2 ? "throw" : "recoil";
   }
   return MARCH[Math.floor(Math.abs(enemy.x) / MARCH_PIXELS) % MARCH.length];
+}
+
+export function zombiePose(enemy: Enemy): ZombiePose {
+  if (enemy.hurt > 0) {
+    return "hurt";
+  }
+  return SHAMBLE[
+    Math.floor(Math.abs(enemy.x) / SHAMBLE_PIXELS) % SHAMBLE.length
+  ];
+}
+
+export function dyingProgress(enemy: Enemy): number {
+  return enemy.alive ? 0 : 1 - enemy.dying / ENEMY_DYING_FRAMES;
+}
+
+export function zombieRows(enemy: Enemy): number {
+  const rows = (enemy.height + ZOMBIE_FRAME.top) * (1 - dyingProgress(enemy));
+  return Math.min(Math.round(rows), ZOMBIE_FRAME.height);
+}
+
+export function knightPose(enemy: Enemy): DropKnightPose {
+  if (enemy.hurt > 0) {
+    return "hurt";
+  }
+  if (enemy.state === "windup" || enemy.state === "throw") {
+    return enemy.state;
+  }
+  if (enemy.cooldown > DROP_KNIGHT.cooldownFrames / 2) {
+    return "empty";
+  }
+  return KNIGHT_WALK[
+    Math.floor(Math.abs(enemy.x) / KNIGHT_STEP_PIXELS) % KNIGHT_WALK.length
+  ];
+}
+
+export function collapseHeight(enemy: Enemy): number {
+  return 1 - (1 - COLLAPSE_HEIGHT) * dyingProgress(enemy);
 }
 
 export function squigglePhase(

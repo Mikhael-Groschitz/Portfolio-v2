@@ -12,19 +12,7 @@ export type Action =
   | "exit"
   | "confirm"
   | "retry"
-  | "overload"
-  | "skip"
   | "mute";
-
-const DEV_ACTIONS: Readonly<Record<string, Action>> =
-  process.env.NODE_ENV === "production"
-    ? {}
-    : {
-        Equal: "overload",
-        NumpadAdd: "overload",
-        PageDown: "skip",
-        BracketRight: "skip",
-      };
 
 const ACTIONS: Readonly<Record<string, Action>> = {
   ArrowLeft: "left",
@@ -45,7 +33,6 @@ const ACTIONS: Readonly<Record<string, Action>> = {
   NumpadEnter: "confirm",
   KeyR: "retry",
   KeyM: "mute",
-  ...DEV_ACTIONS,
 };
 
 const BUTTON_KEYS = new Set<Action>(["confirm", "jump"]);

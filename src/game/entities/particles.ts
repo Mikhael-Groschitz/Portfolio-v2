@@ -2,7 +2,17 @@ import { type Pooled, claim, createPool } from "../core/pool";
 import { type Seeded, random } from "../core/random";
 
 export type Spark =
-  "bone" | "plastic" | "glass" | "data" | "ember" | "impact" | "card";
+  | "bone"
+  | "plastic"
+  | "glass"
+  | "data"
+  | "ember"
+  | "impact"
+  | "card"
+  | "dirt"
+  | "log"
+  | "metal"
+  | "shield";
 
 export interface Particle extends Pooled {
   x: number;

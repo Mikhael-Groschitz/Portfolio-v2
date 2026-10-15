@@ -32,6 +32,10 @@ export function frequencyOf(midi: number): number {
   return A4_HZ * 2 ** ((midi - A4_MIDI) / 12);
 }
 
+export function shiftOctaves(pitch: string, octaves: number): string {
+  return pitch.replace(/\d$/, (octave) => String(Number(octave) + octaves));
+}
+
 export function octaveUp(pitch: string): string {
-  return pitch.replace(/\d$/, (octave) => String(Number(octave) + 1));
+  return shiftOctaves(pitch, 1);
 }

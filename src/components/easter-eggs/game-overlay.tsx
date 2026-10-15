@@ -1,7 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
-import { useEffect, useId, useRef } from "react";
+import { useEffect, useId, useLayoutEffect, useRef } from "react";
 import { TOUCH_MEDIA_QUERY } from "@/components/shell/breakpoints";
 import { useMediaQuery } from "@/components/shell/use-media-query";
 import type { GameOverlayText } from "@/content/types";
@@ -55,15 +55,17 @@ function GameLayer({
   const coarse = useMediaQuery(TOUCH_MEDIA_QUERY);
   const fine = useMediaQuery(FINE_POINTER);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const previous =
       document.activeElement instanceof HTMLElement
         ? document.activeElement
         : null;
     return () => {
-      if (previous?.isConnected) {
-        previous.focus();
-      }
+      requestAnimationFrame(() => {
+        if (previous?.isConnected) {
+          previous.focus();
+        }
+      });
     };
   }, []);
 

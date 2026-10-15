@@ -1,17 +1,26 @@
 import { describe, expect, it } from "vitest";
+import { VIBE } from "../balance";
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../core/camera";
-import { TILE } from "../levels/level";
-import { parseStage } from "../levels/stage";
+import { CAMPAIGN, parseCampaign } from "../levels/campaign";
+import { TILE, isSolid } from "../levels/level";
 import { PALETTE, TRANSPARENT } from "../palette";
 import { fogRows, moonRows, skyRows, towerLights, towerRows } from "./backdrop";
 import {
+  ALERT_SLIDE,
   DOOR,
   DOOR_LOCK,
   GARGOYLE,
   GARGOYLE_EYES,
   GATE,
+  LENS,
   LOG_PANEL,
   MERLON,
+  PROJECTOR,
+  SAVEPOINT,
+  SAVEPOINT_SCREEN,
+  SAVEPOINT_SCREEN_AT,
+  SLIDE_AT,
+  SPOTLIGHT,
   WALL,
   WINDOW,
   type TileArt,
@@ -59,22 +68,51 @@ import {
   frameTop,
   heroFrame,
 } from "./hero-art";
+import { DROP_KNIGHT_ART, DROP_KNIGHT_FRAME } from "./drop-knight-art";
 import { RUN_STEPS } from "./hero-run";
 import {
+  AXE_SPIN,
+  BACKUP_TAPE,
   BEAMS,
   BIG_ENERGY,
+  BUG_CRAWL,
+  CACHE_CHIP,
+  CODE_BLOCKS,
   DISK,
+  DROP_RELIC,
   ENERGY,
+  FIREWALL,
   GC_CHIP,
   GLYPH_SHOTS,
+  INDEX_TREE,
   JOIN_RELIC,
   JOIN_SPIN,
   PEN,
+  README_PAGE,
   SELECT_BOLT,
+  TAPE_REEL,
   TRUNCATE_RELIC,
+  WAVE_CRESTS,
 } from "./item-art";
 import { LETTERS, titleRows } from "./lettering";
-import { type SpriteRows, mirror } from "./sprite";
+import { type SpriteRows, mirror, silhouette } from "./sprite";
+import {
+  BELT,
+  BENCH,
+  CLOCK,
+  CRACKED_SECTOR,
+  CRON_PLATFORMS,
+  EMITTER,
+  EMITTER_LENS,
+  GEAR,
+  NICHE,
+  SECTOR,
+  SECTOR_DEBRIS,
+  SHELF,
+  STAGE_PAINTS,
+} from "./stage-art";
+import { BRACE, COSTUME_ART, VIBE_ART, VIBE_FRAME } from "./vibe-art";
+import { ZOMBIE_ART, ZOMBIE_FRAME } from "./zombie-art";
 
 function expectSprite(rows: SpriteRows, keys = Object.keys(PALETTE)) {
   const width = rows[0]?.length ?? 0;
@@ -87,7 +125,7 @@ function expectSprite(rows: SpriteRows, keys = Object.keys(PALETTE)) {
 }
 
 describe("castle art", () => {
-  const levels = parseStage();
+  const levels = parseCampaign().map((room) => room.level);
   const [level] = levels;
   const tiles = new Set<TileArt>();
   for (const room of levels) {
@@ -133,12 +171,21 @@ describe("castle art", () => {
       DOOR,
       GATE,
       LOG_PANEL,
+      SAVEPOINT,
+      SAVEPOINT_SCREEN,
       doorPlaque("GC"),
       doorPlaque("PROD"),
     ]) {
       expectSprite(rows);
     }
     expect(doorPlaque("PROD")[0].length).toBeLessThanOrEqual(DOOR[0].length);
+    for (const { plaque } of CAMPAIGN) {
+      if (plaque) {
+        expect(doorPlaque(plaque)[0].length).toBeLessThanOrEqual(
+          DOOR[0].length,
+        );
+      }
+    }
     for (let y = DOOR_LOCK.y; y < DOOR_LOCK.y + DOOR_LOCK.height; y++) {
       expect(DOOR[y].slice(DOOR_LOCK.x, DOOR_LOCK.x + DOOR_LOCK.width)).toBe(
         "R".repeat(DOOR_LOCK.width),
@@ -147,6 +194,8 @@ describe("castle art", () => {
     expect(WALL[0]).toHaveLength(TILE);
     expect(GARGOYLE[0]).toHaveLength(TILE);
     expect(WINDOW[0]).toHaveLength(TILE);
+    expect(SAVEPOINT[0].length).toBeLessThanOrEqual(TILE);
+    expect(SAVEPOINT.length).toBeLessThanOrEqual(2 * TILE);
     expect(DOOR.length).toBeLessThanOrEqual(3 * TILE);
     expect(GATE[0]).toHaveLength(2 * TILE);
     for (const eye of GARGOYLE_EYES) {
@@ -275,11 +324,74 @@ describe("enemy and item art", () => {
       ...JOIN_SPIN,
       ...GLYPH_SHOTS,
       ...BEAMS,
+      FIREWALL,
+      INDEX_TREE,
+      CACHE_CHIP,
+      BACKUP_TAPE,
+      README_PAGE,
+      TAPE_REEL,
+      DROP_RELIC,
+      ...AXE_SPIN,
     ]) {
       expectSprite(rows);
     }
     expect(GLYPH_SHOTS).toHaveLength(3);
     expect(BEAMS).toHaveLength(2);
+  });
+
+  it("gives every new item its own silhouette and spins the axe in four turns", () => {
+    const shapes = [
+      FIREWALL,
+      INDEX_TREE,
+      CACHE_CHIP,
+      BACKUP_TAPE,
+      README_PAGE,
+      TAPE_REEL,
+    ].map((rows) => rows.map((row) => row.replace(/[^.]/g, "X")).join("\n"));
+    expect(new Set(shapes).size).toBe(shapes.length);
+    expect(AXE_SPIN).toHaveLength(4);
+    expect(new Set(AXE_SPIN.map((rows) => rows.join(""))).size).toBe(4);
+    expect(DROP_RELIC).toEqual(JOIN_RELIC.map(() => expect.any(String)));
+  });
+
+  it("draws the Zombie Process and the DROP Knight on their own canvas sizes", () => {
+    for (const rows of Object.values(ZOMBIE_ART)) {
+      expectSprite(rows);
+      expect(rows).toHaveLength(ZOMBIE_FRAME.height);
+      expect(rows[0]).toHaveLength(ZOMBIE_FRAME.width);
+    }
+    for (const rows of Object.values(DROP_KNIGHT_ART)) {
+      expectSprite(rows);
+      expect(rows).toHaveLength(DROP_KNIGHT_FRAME.height);
+      expect(rows[0]).toHaveLength(DROP_KNIGHT_FRAME.width);
+    }
+    const knightPoses = Object.values(DROP_KNIGHT_ART).map((rows) =>
+      rows.join(""),
+    );
+    expect(new Set(knightPoses).size).toBe(knightPoses.length - 1);
+    expect(
+      new Set(Object.values(ZOMBIE_ART).map((rows) => rows.join(""))).size,
+    ).toBe(Object.keys(ZOMBIE_ART).length);
+  });
+
+  it("keeps the feet of both mobs on the floor line", () => {
+    for (const rows of [ZOMBIE_ART.shamble1, ZOMBIE_ART.shamble2]) {
+      expect(rows.at(-1)).toMatch(/[^.]/);
+    }
+    for (const rows of [DROP_KNIGHT_ART.walk1, DROP_KNIGHT_ART.throw]) {
+      expect(rows.at(-1)).toMatch(/[^.]/);
+    }
+  });
+
+  it("raises the axe above the helmet and lights the visor before a throw", () => {
+    const top = (rows: readonly string[]) =>
+      rows.findIndex((row) => /[^.]/.test(row));
+    expect(top(DROP_KNIGHT_ART.windup)).toBeLessThan(
+      top(DROP_KNIGHT_ART.walk1),
+    );
+    expect(DROP_KNIGHT_ART.windup.join("")).toContain("L");
+    expect(DROP_KNIGHT_ART.walk1.join("")).not.toContain("L");
+    expect(DROP_KNIGHT_ART.throw.join("")).not.toContain("F");
   });
 });
 
@@ -302,8 +414,121 @@ function contains(rows: SpriteRows, part: SpriteRows): boolean {
   return false;
 }
 
+describe("savepoint art", () => {
+  it("lights the screen and the LED of the console, never its frame", () => {
+    const { x, y } = SAVEPOINT_SCREEN_AT;
+    SAVEPOINT_SCREEN.forEach((row, top) => {
+      [...row].forEach((pixel, left) => {
+        if (pixel !== TRANSPARENT) {
+          expect("nr").toContain(SAVEPOINT[y + top][x + left]);
+        }
+      });
+    });
+    expect(SAVEPOINT_SCREEN.join("")).toContain("g");
+    expect(SAVEPOINT_SCREEN.join("")).toContain("R");
+  });
+});
+
 describe("boss art", () => {
   const label = textRows("DEL", "k");
+
+  it("draws every Vibe Coder pose on one outlined canvas, facing both ways", () => {
+    for (const [right, left] of Object.values(VIBE_ART)) {
+      for (const rows of [right, left]) {
+        expectSprite(rows);
+        expect(rows).toHaveLength(VIBE_FRAME.height);
+        expect(rows[0]).toHaveLength(VIBE_FRAME.width);
+        expect(rows.at(-2)).toMatch(/k/);
+        expect(rows.at(-1)).toMatch(/^\.+$/);
+      }
+      expect(right).toEqual(mirror(left));
+    }
+  });
+
+  it("gives every Vibe Coder pose its own drawing", () => {
+    const drawings = Object.values(VIBE_ART).map(([, left]) => left.join("\n"));
+    expect(new Set(drawings).size).toBe(drawings.length);
+    expect(Object.keys(VIBE_ART)).toEqual(
+      expect.arrayContaining([
+        "idle",
+        "walk1",
+        "walk2",
+        "throw",
+        "shield",
+        "hurt",
+        "unmasked",
+      ]),
+    );
+  });
+
+  it("raises the laptop above the head only before the slam", () => {
+    const headroom = VIBE_FRAME.top - 5;
+    const raised = Object.entries(VIBE_ART)
+      .filter(([, [, left]]) =>
+        left.slice(0, headroom).some((row) => /[^.]/.test(row)),
+      )
+      .map(([pose]) => pose);
+    expect(raised).toEqual(["lift"]);
+  });
+
+  it("takes off a costume that was worn over the idle pose", () => {
+    const [, idle] = VIBE_ART.idle;
+    const [, unmasked] = VIBE_ART.unmasked;
+    const offenders = Object.entries(COSTUME_ART).flatMap(
+      ([piece, [, rows]]) => {
+        expectSprite(rows);
+        return rows.flatMap((row, y) =>
+          [...row].flatMap((pixel, x) =>
+            pixel !== "." && pixel !== "k" && idle[y][x] === "."
+              ? [`${piece} ${x},${y}`]
+              : [],
+          ),
+        );
+      },
+    );
+    expect(offenders).toEqual([]);
+    expect(idle.join("")).toContain("y");
+    expect(unmasked.join("")).not.toContain("y");
+    expect(unmasked.slice(0, -4).join("")).not.toContain("s");
+  });
+
+  it("draws the try/catch braces taller than the boss", () => {
+    expectSprite(BRACE);
+    expect(BRACE.length).toBeGreaterThan(VIBE_FRAME.height - VIBE_FRAME.top);
+  });
+
+  it("draws code blocks, bugs and floor waves of one size each", () => {
+    for (const rows of [...CODE_BLOCKS, ...BUG_CRAWL, ...WAVE_CRESTS.flat()]) {
+      expectSprite(rows);
+    }
+    expect(CODE_BLOCKS).toHaveLength(VIBE.blocks);
+    for (const set of [CODE_BLOCKS, BUG_CRAWL, WAVE_CRESTS.flat()]) {
+      expect(
+        new Set(set.map((rows) => `${rows[0].length}x${rows.length}`)).size,
+      ).toBe(1);
+      expect(new Set(set.map((rows) => rows.join("\n"))).size).toBe(set.length);
+    }
+    for (const [right, left] of WAVE_CRESTS) {
+      expect(left).toEqual(mirror(right));
+    }
+  });
+
+  it("hangs a projector screen and spotlights over the Vibe stage", () => {
+    for (const rows of [PROJECTOR, ALERT_SLIDE, SPOTLIGHT]) {
+      expectSprite(rows);
+    }
+    expect(SLIDE_AT.x + ALERT_SLIDE[0].length).toBeLessThan(
+      PROJECTOR[0].length,
+    );
+    expect(SLIDE_AT.y + ALERT_SLIDE.length).toBeLessThan(PROJECTOR.length);
+    expect(SPOTLIGHT[LENS.y - 1][LENS.x]).toBe("o");
+    const stage = parseCampaign().find(
+      ({ slot }) => slot.kind === "boss" && slot.boss === "vibe",
+    )?.level;
+    expect(stage?.places.screen).toHaveLength(1);
+    expect(stage?.places.spotlight).toHaveLength(2);
+    expect(stage?.places.paste).toHaveLength(VIBE.copies);
+  });
 
   it("draws the Garbage Collector on one canvas size, both ways", () => {
     for (const [right, left] of Object.values(COLLECTOR_ART)) {
@@ -362,6 +587,69 @@ describe("boss art", () => {
     for (const rows of Object.values(COMMAND_LABELS)) {
       expectSprite(rows);
       expect(rows[0].length).toBeLessThan(VIEW_WIDTH / 2);
+    }
+  });
+});
+
+describe("stage art", () => {
+  it("repaints the stages with palette colors only, each new stage its own way", () => {
+    for (const paints of Object.values(STAGE_PAINTS)) {
+      for (const [from, to] of Object.entries(paints)) {
+        expect(PALETTE).toHaveProperty(from);
+        expect(PALETTE).toHaveProperty(to);
+      }
+    }
+    const { catacombs, tapes, lab, cron } = STAGE_PAINTS;
+    const looks = [catacombs, tapes, lab, cron].map((paints) =>
+      JSON.stringify(paints),
+    );
+    expect(new Set(looks).size).toBe(4);
+    expect(looks).not.toContain("{}");
+  });
+
+  it("draws the new ground one tile wide and tells the platform groups apart by shape", () => {
+    for (const rows of [BELT, SECTOR, CRACKED_SECTOR]) {
+      expectSprite(rows);
+      expect(rows).toHaveLength(TILE);
+      expect(rows[0]).toHaveLength(TILE);
+    }
+    expect(SECTOR.join("")).not.toEqual(CRACKED_SECTOR.join(""));
+    for (const rows of [SECTOR_DEBRIS, EMITTER, ...CRON_PLATFORMS]) {
+      expectSprite(rows);
+    }
+    const [first, second] = CRON_PLATFORMS;
+    expect(silhouette(first, "x")).not.toEqual(silhouette(second, "x"));
+    expect(
+      EMITTER[EMITTER_LENS.y].slice(
+        EMITTER_LENS.x,
+        EMITTER_LENS.x + EMITTER_LENS.width,
+      ),
+    ).toMatch(/r/);
+  });
+
+  it("hangs every new decoration on open wall", () => {
+    const sizes = [
+      ["niche", NICHE],
+      ["shelf", SHELF],
+      ["bench", BENCH],
+      ["clock", CLOCK],
+      ["gear", GEAR],
+    ] as const;
+    for (const [, rows] of sizes) {
+      expectSprite(rows);
+    }
+    for (const { level } of parseCampaign()) {
+      for (const [place, rows] of sizes) {
+        const columns = Math.floor(rows[0].length / TILE);
+        const tall = Math.floor(rows.length / TILE);
+        for (const { column, row } of level.places[place]) {
+          for (let y = row; y < row + tall; y++) {
+            for (let x = column; x < column + columns; x++) {
+              expect(isSolid(level, x, y), `${place} at ${x},${y}`).toBe(false);
+            }
+          }
+        }
+      }
     }
   });
 });

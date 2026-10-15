@@ -2,6 +2,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join, relative, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { describe, expect, it } from "vitest";
+import * as BALANCE from "./balance";
 import { COLORS, type Color, PALETTE, TRANSPARENT } from "./palette";
 
 const ROOT = fileURLToPath(new URL("../..", import.meta.url));
@@ -14,6 +15,9 @@ const SERIES_TERMS = [
   "belmont",
   "dracula",
   "symphony of the night",
+  "bloody zombie",
+  "axe knight",
+  "axe armor",
 ];
 
 const TRIGGER_TERM = "konami";
@@ -107,5 +111,60 @@ describe("game palette", () => {
     for (const [color, name] of Object.entries(SYNTAX_TOKENS)) {
       expect(COLORS[color as Color]).toBe(token(name)?.toLowerCase());
     }
+  });
+});
+
+function numbers(value: unknown, path: string): [string, number][] {
+  if (typeof value === "number") {
+    return [[path, value]];
+  }
+  if (typeof value === "object" && value !== null) {
+    return Object.entries(value).flatMap(([key, entry]) =>
+      numbers(entry, `${path}.${key}`),
+    );
+  }
+  return [];
+}
+
+describe("balance sanity", () => {
+  const all = numbers(BALANCE, "balance");
+
+  it("keeps every number positive and finite", () => {
+    for (const [path, value] of all) {
+      expect(Number.isFinite(value), path).toBe(true);
+      expect(value, path).toBeGreaterThan(0);
+    }
+  });
+
+  it("keeps every chance between 0 and 1 and every loot table within 1", () => {
+    for (const [path, value] of all) {
+      if (/chance$/i.test(path)) {
+        expect(value, path).toBeLessThanOrEqual(1);
+      }
+    }
+    const { DROP_KNIGHT } = BALANCE;
+    expect(
+      DROP_KNIGHT.backupChance +
+        DROP_KNIGHT.boostChance +
+        DROP_KNIGHT.energyChance,
+    ).toBeLessThanOrEqual(1);
+    expect(BALANCE.README.damageFactor).toBeLessThan(1);
+    expect(BALANCE.CACHE.factor).toBeLessThan(1);
+  });
+
+  it("counts frames in whole numbers", () => {
+    for (const [path, value] of all) {
+      if (/frames$/i.test(path)) {
+        expect(Number.isInteger(value), path).toBe(true);
+      }
+    }
+  });
+
+  it("keeps the new boosts limited, as the brief asks", () => {
+    const { BACKUP, FIREWALL, INDEX, RAM, WHIP } = BALANCE;
+    expect(FIREWALL.charges).toBe(1);
+    expect(BACKUP.relief).toBeLessThan(RAM.crash);
+    expect(INDEX.reach).toBeGreaterThan(WHIP.reach);
+    expect(INDEX.reach).toBeLessThanOrEqual(WHIP.reach * 1.5);
   });
 });

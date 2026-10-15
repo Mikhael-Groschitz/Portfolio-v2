@@ -1,6 +1,6 @@
-import { ENEMY_HURT_FRAMES, ENEMY_KNOCKBACK, WATCHDOG } from "../balance";
+import { WATCHDOG } from "../balance";
 import { TILE } from "../levels/level";
-import { type Enemy, type Surroundings, centerX } from "./enemy";
+import { type Enemy, type Surroundings, centerX, recoil } from "./enemy";
 import { HERO_HEIGHT, type Hero } from "./hero";
 import { PROJECTILE_SIZE, type Projectile, launch } from "./projectiles";
 
@@ -62,9 +62,8 @@ function drift(enemy: Enemy, { hero }: Surroundings): void {
 
 export function updateWatchdog(enemy: Enemy, surroundings: Surroundings): void {
   enemy.cooldown = Math.max(enemy.cooldown - 1, 0);
-  if (enemy.hurt > 0) {
-    enemy.x += (enemy.knock * ENEMY_KNOCKBACK * enemy.hurt) / ENEMY_HURT_FRAMES;
-    enemy.hurt -= 1;
+  if (recoil(enemy)) {
+    enemy.x += enemy.vx;
     return;
   }
   if (enemy.state === "charge") {

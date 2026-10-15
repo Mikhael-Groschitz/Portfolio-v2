@@ -28,8 +28,11 @@ export const WHIP = {
 export const RAM = {
   start: 20,
   crash: 100,
+  entryCeiling: 50,
   devOverload: 20,
 } as const;
+
+export const RETRY = { relief: 10, floor: 20 } as const;
 
 export const HURT = {
   invulnerableFrames: 60,
@@ -49,6 +52,14 @@ export const DAMAGE = {
   legacy: 8,
   card: 6,
   dive: 14,
+  vibe: 6,
+  zombie: 5,
+  dropKnight: 8,
+  dropAxe: 10,
+  codeBlock: 6,
+  wave: 8,
+  bug: 6,
+  testBeam: 8,
 } as const;
 
 export const SYNTAX_ERROR = {
@@ -77,6 +88,38 @@ export const WATCHDOG = {
   beamRange: 220,
 } as const;
 
+export const ZOMBIE = {
+  health: 3,
+  walkSpeed: 0.28,
+  riseFrames: 40,
+  riseStagger: 24,
+  turnFrames: 50,
+  zoneGap: 4,
+  zoneMargin: 3,
+  zoneHeight: 3,
+  aliveCap: 4,
+  perGrave: 2,
+  regrowFrames: 90,
+  energyChance: 0.35,
+} as const;
+
+export const DROP_KNIGHT = {
+  health: 6,
+  walkSpeed: 0.35,
+  sight: 170,
+  keepAway: 72,
+  windupFrames: 40,
+  throwFrames: 14,
+  cooldownFrames: 100,
+  knockback: 0.4,
+  axeGravity: 0.16,
+  lowAxe: { speed: 1.7, lift: 3 },
+  highAxe: { speed: 1.1, lift: 5 },
+  energyChance: 0.6,
+  boostChance: 0.15,
+  backupChance: 0.05,
+} as const;
+
 export const QUERY_ENERGY = {
   start: 5,
   max: 99,
@@ -95,10 +138,78 @@ export const SUBWEAPONS = {
   select: { cost: 1, damage: 1, limit: 2, speed: 4, range: 200 },
   join: { cost: 2, damage: 1, limit: 1, speed: 3.6, turnFrames: 40, lift: 1.1 },
   truncate: { cost: 5, damage: 2, limit: 1 },
+  drop: {
+    cost: 3,
+    damage: 2,
+    limit: 2,
+    speed: 1.6,
+    lift: 5.2,
+    gravity: 0.2,
+    lifetime: 150,
+  },
+} as const;
+
+export const SECTOR = {
+  crackFrames: 36,
+  fallFrames: 24,
+  regrowFrames: 300,
+} as const;
+
+export const BELT = { speed: 0.9 } as const;
+
+export const CRON = { phaseFrames: 180, overlapFrames: 24 } as const;
+
+export const TEST_BEAM = {
+  offFrames: 100,
+  warnFrames: 50,
+  onFrames: 70,
+  staggerFrames: 40,
+  width: 6,
+} as const;
+
+export const FIREWALL = { charges: 1 } as const;
+export const INDEX = { frames: 600, reach: 48 } as const;
+export const CACHE = { frames: 600, factor: 0.6 } as const;
+export const BACKUP = { relief: 50 } as const;
+export const README = { damageFactor: 0.8 } as const;
+export const TAPE = { boostChance: 0.5 } as const;
+
+export const VIBE = {
+  health: 12,
+  deployHealth: 4,
+  introFrames: 120,
+  walkFrames: 70,
+  walkSpeed: 0.6,
+  keepAway: 96,
+  typeFrames: 45,
+  blocks: 3,
+  blockGap: 12,
+  blockLift: 3.4,
+  blockSpeeds: [1.1, 1.7, 2.3],
+  blockGravity: 0.14,
+  copyFrames: 50,
+  copies: 2,
+  copyHealth: 1,
+  shieldFrames: 180,
+  exposedFrames: 100,
+  deployFrames: 90,
+  slamFrames: 50,
+  landFrames: 24,
+  waveSpeed: 2,
+  bugs: 3,
+  bugSpread: 40,
+  bugWarnFrames: 50,
+  bugGravity: 0.25,
+  bugsFrames: 110,
+  lineFrames: 140,
+  absorbFrames: 16,
+  defeatFrames: 160,
+  fleeFrames: 40,
+  fleeSpeed: 2,
 } as const;
 
 export const COLLECTOR = {
-  health: 16,
+  health: 18,
   introFrames: 90,
   hoverFrames: 70,
   hurriedHoverFrames: 45,
