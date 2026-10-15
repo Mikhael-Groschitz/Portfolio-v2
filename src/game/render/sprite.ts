@@ -31,6 +31,28 @@ export function silhouette(rows: SpriteRows, key: string): string[] {
   );
 }
 
+export function keep(
+  rows: SpriteRows,
+  wanted: (row: number, column: number, pixel: string) => boolean,
+): string[] {
+  return rows.map((line, row) =>
+    [...line]
+      .map((pixel, column) =>
+        wanted(row, column, pixel) ? pixel : TRANSPARENT,
+      )
+      .join(""),
+  );
+}
+
+export function repaint(
+  rows: SpriteRows,
+  paints: Readonly<Record<string, string>>,
+): string[] {
+  return rows.map((line) =>
+    [...line].map((pixel) => paints[pixel] ?? pixel).join(""),
+  );
+}
+
 export function rotate(rows: SpriteRows): string[] {
   const width = rows[0]?.length ?? 0;
   return Array.from({ length: width }, (_, x) =>

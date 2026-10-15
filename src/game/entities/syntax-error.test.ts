@@ -1,19 +1,25 @@
 import { describe, expect, it } from "vitest";
 import { SYNTAX_ERROR } from "../balance";
 import { TILE, parseLevel } from "../levels/level";
-import { type Enemy, type Surroundings, createEnemies } from "./enemy";
+import {
+  type Enemy,
+  type Surroundings,
+  createEnemies,
+  createZones,
+} from "./enemy";
 import { createHero } from "./hero";
 import { createProjectiles, moveProjectile } from "./projectiles";
 import { throwSpeed, updateSyntaxError } from "./syntax-error";
 
 function setup(map: readonly string[], heroColumn: number) {
   const level = parseLevel(map);
+  const enemies = createEnemies(level);
   const surroundings: Surroundings = {
-    room: { level },
+    room: { level, enemies, zones: createZones(level) },
     hero: createHero({ column: heroColumn, row: map.length - 2 }),
     projectiles: createProjectiles(),
   };
-  const [enemy] = createEnemies(level);
+  const [enemy] = enemies;
   return { surroundings, enemy };
 }
 

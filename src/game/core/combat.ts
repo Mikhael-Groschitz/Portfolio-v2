@@ -1,7 +1,13 @@
-import { DAMAGE, GC, SUBWEAPONS, WHIP } from "../balance";
+import { DAMAGE, SUBWEAPONS, WHIP } from "../balance";
 import { isVulnerable, touchDamage } from "../entities/boss";
 import { type Collector, laneBox, slashBox } from "../entities/collector";
-import { type Enemy, centerX, damageEnemy } from "../entities/enemy";
+import {
+  ENEMY_TRAITS,
+  type Enemy,
+  centerX,
+  damageEnemy,
+  isTangible,
+} from "../entities/enemy";
 import {
   type Controls,
   type Hero,
@@ -15,39 +21,78 @@ import {
 } from "../entities/hero";
 import {
   type Container,
+  type ContainerKind,
+  type DropKind,
   applyDrop,
   dropFor,
+  lootFor,
   spawnDrop,
 } from "../entities/items";
-import { burst } from "../entities/particles";
+import { burningBeam } from "../entities/mechanisms";
+import { type Spark, burst } from "../entities/particles";
 import {
   PROJECTILE_SIZE,
   type Projectile,
   countFlying,
+  isFriendly,
   isHostile,
   isWhippable,
   launch,
 } from "../entities/projectiles";
+import { boostsOf } from "../levels/campaign";
 import { clearHostileShots, hitBoss } from "./bosses";
 import { VIEW_WIDTH } from "./camera";
 import { type Box, overlaps } from "./collision";
-import { cue } from "./cues";
+import { type Cue, cue } from "./cues";
 import { announce } from "./notices";
 import { random } from "./random";
-import type { World } from "./world";
+import type { Notice, World } from "./world";
 
 export const SWEEP_FRAMES = 24;
 
 const LASH: Box = { x: 0, y: 0, width: 0, height: 0 };
 const ATTACK: Box = { x: 0, y: 0, width: 0, height: 0 };
 const IMPACT_SPARKS = 6;
+const DEFEAT_SPARKS = 14;
+const SHIELD_SPARKS = 10;
 
 const SHOT_DAMAGE: Readonly<Record<Projectile["kind"], number>> = {
   select: SUBWEAPONS.select.damage,
   join: SUBWEAPONS.join.damage,
+  drop: SUBWEAPONS.drop.damage,
   glyph: DAMAGE.glyph,
   beam: DAMAGE.logBeam,
   card: DAMAGE.card,
+  dropAxe: DAMAGE.dropAxe,
+  code: DAMAGE.codeBlock,
+  hallucination: 0,
+  wave: DAMAGE.wave,
+  bug: DAMAGE.bug,
+};
+
+const THROW_LIFT: Readonly<Record<"select" | "join" | "drop", number>> = {
+  select: 0,
+  join: SUBWEAPONS.join.lift,
+  drop: SUBWEAPONS.drop.lift,
+};
+
+const CONTAINER_SPARKS: Readonly<Record<ContainerKind, Spark>> = {
+  disk: "plastic",
+  pen: "glass",
+  tape: "metal",
+};
+
+const PICKUP_FEEDBACK: Readonly<
+  Record<DropKind, { cue: Cue; notice?: Notice }>
+> = {
+  energy: { cue: "collect" },
+  bigEnergy: { cue: "collect" },
+  gc: { cue: "relief" },
+  firewall: { cue: "boost", notice: "firewall" },
+  index: { cue: "boost", notice: "index" },
+  cache: { cue: "boost", notice: "cache" },
+  backup: { cue: "relief", notice: "backup" },
+  readme: { cue: "relic", notice: "readme" },
 };
 
 function breakContainer(world: World, container: Container): void {
@@ -55,15 +100,13 @@ function breakContainer(world: World, container: Container): void {
   const y = container.y + container.height / 2;
   container.broken = true;
   cue(world, "break");
-  burst(
-    world.particles,
-    world,
-    container.kind === "disk" ? "plastic" : "glass",
+  burst(world.particles, world, CONTAINER_SPARKS[container.kind], x, y, 10);
+  spawnDrop(
+    world.drops,
+    dropFor(container.kind, random(world), boostsOf(world.room.slot)),
     x,
     y,
-    10,
   );
-  spawnDrop(world.drops, dropFor(container.kind, random(world)), x, y);
 }
 
 function hitEnemy(
@@ -72,24 +115,19 @@ function hitEnemy(
   damage: number,
   fromX: number,
 ): void {
+  const traits = ENEMY_TRAITS[enemy.kind];
   const x = centerX(enemy);
   const y = enemy.y + enemy.height / 2;
   burst(world.particles, world, "impact", x, y, IMPACT_SPARKS);
   if (!damageEnemy(enemy, damage, fromX)) {
-    cue(world, "hit");
+    cue(world, traits.hit);
     return;
   }
-  cue(world, "smash");
-  burst(
-    world.particles,
-    world,
-    enemy.kind === "syntaxError" ? "bone" : "ember",
-    x,
-    y,
-    14,
-  );
-  if (random(world) < GC.enemyEnergyChance) {
-    spawnDrop(world.drops, "energy", x, y);
+  cue(world, traits.defeat);
+  burst(world.particles, world, traits.spark, x, y, DEFEAT_SPARKS);
+  const loot = lootFor(traits.loot, random(world), boostsOf(world.room.slot));
+  if (loot) {
+    spawnDrop(world.drops, loot, x, y);
   }
 }
 
@@ -113,7 +151,11 @@ function strike(world: World): void {
     return;
   }
   for (const enemy of room.enemies) {
-    if (enemy.alive && enemy.struck !== hero.lashes && overlaps(LASH, enemy)) {
+    if (
+      isTangible(enemy) &&
+      enemy.struck !== hero.lashes &&
+      overlaps(LASH, enemy)
+    ) {
       enemy.struck = hero.lashes;
       hitEnemy(world, enemy, WHIP.damage, centerX(hero));
     }
@@ -155,7 +197,7 @@ function shoot(world: World, projectile: Projectile): void {
   const stops = projectile.kind === "select";
   for (const enemy of world.room.enemies) {
     if (
-      enemy.alive &&
+      isTangible(enemy) &&
       enemy.hitToken !== projectile.token &&
       overlaps(projectile, enemy)
     ) {
@@ -183,8 +225,20 @@ function shoot(world: World, projectile: Projectile): void {
 }
 
 function hurt(world: World, amount: number, fromX: number): void {
-  if (hurtHero(world.hero, amount, fromX)) {
+  const { hero } = world;
+  const result = hurtHero(hero, amount, fromX);
+  if (result === "hurt") {
     cue(world, "hurt");
+  } else if (result === "blocked") {
+    cue(world, "block");
+    burst(
+      world.particles,
+      world,
+      "shield",
+      centerX(hero),
+      hero.y + hero.height / 2,
+      SHIELD_SPARKS,
+    );
   }
 }
 
@@ -226,10 +280,8 @@ function harm(world: World): void {
     return;
   }
   for (const enemy of world.room.enemies) {
-    if (enemy.alive && overlaps(hero, enemy)) {
-      const damage =
-        enemy.kind === "syntaxError" ? DAMAGE.syntaxError : DAMAGE.watchdog;
-      hurt(world, damage, centerX(enemy));
+    if (isTangible(enemy) && overlaps(hero, enemy)) {
+      hurt(world, ENEMY_TRAITS[enemy.kind].touch, centerX(enemy));
       return;
     }
   }
@@ -244,16 +296,35 @@ function harm(world: World): void {
       return;
     }
   }
+  const beam = burningBeam(world.room.mechanisms, hero);
+  if (beam) {
+    hurt(world, DAMAGE.testBeam, centerX(beam));
+    return;
+  }
   harmByBoss(world);
+}
+
+function collect(world: World, kind: DropKind): void {
+  applyDrop(world.hero, kind);
+  const feedback = PICKUP_FEEDBACK[kind];
+  cue(world, feedback.cue);
+  if (feedback.notice) {
+    announce(world, feedback.notice);
+  }
 }
 
 function gather(world: World): void {
   const { hero } = world;
   for (const drop of world.drops) {
     if (drop.active && overlaps(hero, drop)) {
-      applyDrop(hero, drop.kind);
       drop.active = false;
-      cue(world, drop.kind === "gc" ? "relief" : "collect");
+      collect(world, drop.kind);
+    }
+  }
+  for (const pickup of world.room.pickups) {
+    if (!pickup.taken && overlaps(hero, pickup)) {
+      pickup.taken = true;
+      collect(world, pickup.kind);
     }
   }
   for (const relic of world.room.relics) {
@@ -269,7 +340,7 @@ function gather(world: World): void {
 export function resolveCombat(world: World): void {
   strike(world);
   for (const projectile of world.projectiles) {
-    if (projectile.active && !isHostile(projectile)) {
+    if (projectile.active && isFriendly(projectile)) {
       shoot(world, projectile);
     }
   }
@@ -286,7 +357,7 @@ function truncate(world: World): void {
   clearHostileShots(world);
   const damage = SUBWEAPONS.truncate.damage;
   for (const enemy of world.room.enemies) {
-    if (enemy.alive && onScreen(world, enemy)) {
+    if (isTangible(enemy) && onScreen(world, enemy)) {
       hitEnemy(world, enemy, damage, centerX(world.hero));
     }
   }
@@ -297,7 +368,7 @@ function truncate(world: World): void {
   world.sweep = SWEEP_FRAMES;
 }
 
-function throwFromHand(world: World, kind: "select" | "join"): void {
+function throwFromHand(world: World, kind: "select" | "join" | "drop"): void {
   const { hero } = world;
   const { width, height } = PROJECTILE_SIZE[kind];
   world.tokens += 1;
@@ -306,7 +377,7 @@ function throwFromHand(world: World, kind: "select" | "join"): void {
     x: hero.facing > 0 ? hero.x + hero.width : hero.x - width,
     y: handY(hero) - height / 2,
     vx: hero.facing * SUBWEAPONS[kind].speed,
-    vy: kind === "join" ? -SUBWEAPONS.join.lift : 0,
+    vy: -THROW_LIFT[kind],
     facing: hero.facing,
     variant: 0,
     token: world.tokens,

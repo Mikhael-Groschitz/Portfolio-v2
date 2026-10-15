@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { DAMAGE, RAM, SUBWEAPONS, WHIP } from "../balance";
+import {
+  DAMAGE,
+  DROP_KNIGHT,
+  FIREWALL,
+  RAM,
+  SUBWEAPONS,
+  TAPE,
+  WHIP,
+} from "../balance";
 import {
   type Controls,
   LASH_FRAMES,
@@ -9,6 +17,7 @@ import {
 } from "../entities/hero";
 import { launch } from "../entities/projectiles";
 import { headLine } from "../entities/watchdog";
+import { CAMPAIGN, type Slot } from "../levels/campaign";
 import { TILE, parseLevel } from "../levels/level";
 import { SWEEP_FRAMES } from "./combat";
 import {
@@ -20,7 +29,11 @@ import {
   step,
 } from "./world";
 
-function arena(floorRow: string, extra: Record<number, string> = {}): World {
+function arena(
+  floorRow: string,
+  extra: Record<number, string> = {},
+  slot: Slot = CAMPAIGN[0],
+): World {
   const rows = [
     "##############################",
     ...Array.from(
@@ -30,7 +43,7 @@ function arena(floorRow: string, extra: Record<number, string> = {}): World {
     floorRow,
     "##############################",
   ];
-  const world = createWorld([parseLevel(rows)], {
+  const world = createWorld([{ slot, level: parseLevel(rows) }], {
     reducedMotion: false,
     seed: 3,
   });
@@ -189,11 +202,12 @@ describe("subweapons", () => {
   it("switches with C and says which one is active", () => {
     const world = arena(EMPTY);
     grantSubweapon(world.hero, "join");
+    const { notices } = world;
     run(world, 1, { switchPressed: true });
     expect(hudOf(world)).toMatchObject({
       subweapon: "select",
       notice: "switch",
-      notices: 1,
+      notices: notices + 1,
     });
   });
 });
@@ -247,15 +261,112 @@ describe("damage", () => {
   });
 });
 
+describe("new mobs and items", () => {
+  it("throws DROP up in an arc that cuts through every enemy on the way", () => {
+    const world = arena("#S   x x                    E#");
+    grantSubweapon(world.hero, "drop");
+    world.hero.energy = 10;
+    run(world, 1, { subweaponPressed: true });
+    const axe = world.projectiles.find(
+      (projectile) => projectile.active && projectile.kind === "drop",
+    );
+    expect(axe?.vy).toBeCloseTo(SUBWEAPONS.drop.gravity - SUBWEAPONS.drop.lift);
+    expect(world.hero.energy).toBe(10 - SUBWEAPONS.drop.cost);
+    expect(world.cues.drop).toBe(1);
+    for (const projectile of world.projectiles) {
+      projectile.active = false;
+    }
+    const [first, second] = world.room.enemies;
+    for (const enemy of [first, second]) {
+      enemy.cooldown = 10_000;
+    }
+    world.tokens += 1;
+    const cutter = launch(world.projectiles, {
+      kind: "drop",
+      x: first.x,
+      y: first.y,
+      vx: 0,
+      vy: 0,
+      facing: 1,
+      variant: 0,
+      token: world.tokens,
+    });
+    run(world, 1);
+    expect(first.alive).toBe(false);
+    expect(cutter?.active).toBe(true);
+    if (cutter) {
+      cutter.x = second.x;
+      cutter.y = second.y;
+    }
+    run(world, 1);
+    expect(second.alive).toBe(false);
+  });
+
+  it("lets the Firewall swallow a hit with its own sound", () => {
+    const world = arena("#S x                        E#");
+    world.hero.firewall = FIREWALL.charges;
+    world.room.enemies[0].x = world.hero.x;
+    run(world, 1);
+    expect(world.hero.ram).toBe(RAM.start);
+    expect(world.hero.firewall).toBe(0);
+    expect(world.cues.block).toBe(1);
+    expect(world.cues.hurt).toBe(0);
+  });
+
+  it("picks up loose items with a short message", () => {
+    const world = arena("#S w  i                     E#");
+    run(world, 60, { right: true });
+    expect(world.hero.firewall).toBe(FIREWALL.charges);
+    expect(world.hero.index).toBeGreaterThan(0);
+    expect(world.room.pickups.every((pickup) => pickup.taken)).toBe(true);
+    expect(world.notice).toBe("index");
+    expect(world.cues.boost).toBe(2);
+  });
+
+  it("rings the armor of the DROP Knight", () => {
+    const world = arena("#S k                        E#");
+    const [knight] = world.room.enemies;
+    knight.cooldown = 10_000;
+    lash(world);
+    expect(knight.health).toBe(DROP_KNIGHT.health - WHIP.damage);
+    expect(world.cues.clank).toBe(1);
+  });
+
+  it("breaks a tape into a boost the stage offers", () => {
+    const stage = CAMPAIGN.find(
+      (slot) => slot.kind === "stage" && slot.boosts.length === 1,
+    );
+    if (!stage) {
+      throw new Error("A stage should offer a single boost");
+    }
+    const world = arena(EMPTY, { 5: "#  r                         #" }, stage);
+    world.seed = 1;
+    let gained = false;
+    for (let attempt = 0; attempt < 20 && !gained; attempt++) {
+      world.room.containers[0].broken = false;
+      lash(world);
+      gained = world.drops.some(
+        (drop) => drop.active && drop.kind === "firewall",
+      );
+      for (const drop of world.drops) {
+        drop.active = false;
+      }
+    }
+    expect(TAPE.boostChance).toBeGreaterThan(0);
+    expect(gained).toBe(true);
+  });
+});
+
 describe("relics", () => {
   it("equip the subweapon and announce it", () => {
     const world = arena("#S j                        E#");
+    const { notices } = world;
     run(world, 30, { right: true });
     expect(world.hero.subweapons).toEqual(["select", "join"]);
     expect(hudOf(world)).toMatchObject({
       subweapon: "join",
       notice: "join",
-      notices: 1,
+      notices: notices + 1,
     });
     expect(world.room.relics[0].taken).toBe(true);
   });

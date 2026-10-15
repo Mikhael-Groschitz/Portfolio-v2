@@ -1,28 +1,19 @@
+import { SYNTAX_ERROR } from "../balance";
 import {
-  ENEMY_HURT_FRAMES,
-  ENEMY_KNOCKBACK,
-  MOVEMENT,
-  SYNTAX_ERROR,
-} from "../balance";
-import { moveBody } from "../core/collision";
-import { type Level, TILE, isFloor, isSolid } from "../levels/level";
-import { type Enemy, type Surroundings, centerX } from "./enemy";
+  type Enemy,
+  type Surroundings,
+  blockedAhead,
+  centerX,
+  faceToward,
+  fall,
+  recoil,
+} from "./enemy";
 import type { Hero } from "./hero";
 import { PROJECTILE_SIZE, launch } from "./projectiles";
 
 const GLYPH_VARIANTS = 3;
 
 const VERTICAL_SIGHT = 48;
-
-function blockedAhead(enemy: Enemy, level: Level): boolean {
-  const front = enemy.facing > 0 ? enemy.x + enemy.width + 1 : enemy.x - 1;
-  const column = Math.floor(front / TILE);
-  const feet = enemy.y + enemy.height;
-  return (
-    isSolid(level, column, Math.floor((feet - 1) / TILE)) ||
-    !isFloor(level, column, Math.floor((feet + 1) / TILE))
-  );
-}
 
 function sees(enemy: Enemy, hero: Hero): boolean {
   return (
@@ -64,9 +55,7 @@ function act(enemy: Enemy, surroundings: Surroundings): void {
     room: { level },
     hero,
   } = surroundings;
-  if (enemy.hurt > 0) {
-    enemy.vx = (enemy.knock * ENEMY_KNOCKBACK * enemy.hurt) / ENEMY_HURT_FRAMES;
-    enemy.hurt -= 1;
+  if (recoil(enemy)) {
     return;
   }
   if (enemy.state === "windup") {
@@ -83,7 +72,7 @@ function act(enemy: Enemy, surroundings: Surroundings): void {
     enemy.state = "windup";
     enemy.timer = SYNTAX_ERROR.windupFrames;
     enemy.vx = 0;
-    enemy.facing = centerX(hero) >= centerX(enemy) ? 1 : -1;
+    faceToward(enemy, centerX(hero));
     return;
   }
   if (enemy.grounded && blockedAhead(enemy, level)) {
@@ -98,6 +87,5 @@ export function updateSyntaxError(
 ): void {
   enemy.cooldown = Math.max(enemy.cooldown - 1, 0);
   act(enemy, surroundings);
-  enemy.vy = Math.min(enemy.vy + MOVEMENT.gravity, MOVEMENT.maxFallSpeed);
-  moveBody(surroundings.room.level, enemy);
+  fall(enemy, surroundings.room.level);
 }

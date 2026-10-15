@@ -7,7 +7,7 @@ import {
   skipIntro,
   startIntro,
 } from "../core/world";
-import { parseStage } from "../levels/stage";
+import { parseCampaign } from "../levels/campaign";
 import { VOLUME, createGameAudio } from "./engine";
 import { frequencyOf, midiOf } from "./notes";
 
@@ -150,13 +150,13 @@ class FakeContext {
   }
 }
 
-const levels = parseStage();
+const rooms = parseCampaign();
 
 function setup(muted = false) {
   const context = new FakeContext();
   const factory = vi.fn(() => context as unknown as AudioContext);
   const audio = createGameAudio({ createContext: factory });
-  const world = createWorld(levels, { reducedMotion: false, muted });
+  const world = createWorld(rooms, { reducedMotion: false, muted });
   return { context, factory, audio, world };
 }
 
@@ -284,7 +284,7 @@ describe("game audio", () => {
 
   it("keeps the game running in a browser without Web Audio", () => {
     const audio = createGameAudio({ createContext: () => null });
-    const world = createWorld(levels, { reducedMotion: false });
+    const world = createWorld(rooms, { reducedMotion: false });
     expect(() => {
       audio.start();
       open(world);

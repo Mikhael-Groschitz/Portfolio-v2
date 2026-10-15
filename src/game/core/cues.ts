@@ -24,6 +24,21 @@ export const CUES = [
   "call",
   "rollback",
   "commit",
+  "drop",
+  "rise",
+  "sink",
+  "clank",
+  "windup",
+  "axe",
+  "block",
+  "boost",
+  "typing",
+  "paste",
+  "shield",
+  "pop",
+  "deploy",
+  "buzz",
+  "costume",
 ] as const;
 
 export type Cue = (typeof CUES)[number];

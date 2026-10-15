@@ -45,11 +45,12 @@ describe("game keys", () => {
     expect(actionFor("toString")).toBeNull();
   });
 
-  it("offers the RAM and skip shortcuts outside production builds", () => {
-    expect(actionFor("Equal")).toBe("overload");
-    expect(actionFor("NumpadAdd")).toBe("overload");
-    expect(actionFor("PageDown")).toBe("skip");
-    expect(actionFor("BracketRight")).toBe("skip");
+  it("leaves the developer shortcuts to the dev tools", () => {
+    for (const code of ["Equal", "NumpadAdd", "PageDown", "BracketRight"]) {
+      expect(actionFor(code)).toBeNull();
+    }
+    expect(actionFor("F9")).toBeNull();
+    expect(actionFor("Digit1")).toBeNull();
   });
 
   it("keeps held keys and reports a press only once", () => {

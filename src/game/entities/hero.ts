@@ -1,10 +1,13 @@
 import {
+  CACHE,
   CAST_FRAMES,
   CLOUD,
   HURT,
+  INDEX,
   MOVEMENT,
   QUERY_ENERGY,
   RAM,
+  README,
   WHIP,
 } from "../balance";
 import {
@@ -20,14 +23,35 @@ const HERO_WIDTH = 12;
 export const HERO_HEIGHT = 28;
 const HAND_HEIGHT = 11;
 
-export const LASH_FRAMES =
-  WHIP.windupFrames + WHIP.activeFrames + WHIP.recoverFrames;
+export interface LashTiming {
+  windup: number;
+  active: number;
+  recover: number;
+  total: number;
+}
+
+function lashTimingOf(factor: number): LashTiming {
+  const windup = Math.round(WHIP.windupFrames * factor);
+  const recover = Math.round(WHIP.recoverFrames * factor);
+  return {
+    windup,
+    active: WHIP.activeFrames,
+    recover,
+    total: windup + WHIP.activeFrames + recover,
+  };
+}
+
+export const NORMAL_LASH = lashTimingOf(1);
+export const QUICK_LASH = lashTimingOf(CACHE.factor);
+export const LASH_FRAMES = NORMAL_LASH.total;
 
 const EXTEND_FRAMES = 2;
 const LASH_THICKNESS = 7;
 const CROUCH_DROP = HERO_HEIGHT - MOVEMENT.crouchHeight;
 
-export type Subweapon = "select" | "join" | "truncate";
+export type Subweapon = "select" | "join" | "truncate" | "drop";
+
+export type HitResult = "hurt" | "blocked" | null;
 
 export interface Controls {
   left: boolean;
@@ -57,6 +81,7 @@ export interface Hero extends Body {
   jumpBuffer: number;
   lash: number;
   lashes: number;
+  quickLash: boolean;
   stun: number;
   invulnerable: number;
   crouching: boolean;
@@ -68,6 +93,10 @@ export interface Hero extends Body {
   energy: number;
   subweapons: Subweapon[];
   subweapon: number;
+  firewall: number;
+  index: number;
+  cache: number;
+  readme: boolean;
   stride: number;
 }
 
@@ -100,6 +129,7 @@ export function createHero(cell: Cell): Hero {
     jumpBuffer: 0,
     lash: -1,
     lashes: 0,
+    quickLash: false,
     stun: 0,
     invulnerable: 0,
     crouching: false,
@@ -111,6 +141,10 @@ export function createHero(cell: Cell): Hero {
     energy: QUERY_ENERGY.start,
     subweapons: ["select"],
     subweapon: 0,
+    firewall: 0,
+    index: 0,
+    cache: 0,
+    readme: false,
     stride: 0,
   };
   placeHero(hero, cell);
@@ -164,9 +198,17 @@ function crouch(hero: Hero, controls: Controls, level: Level): void {
   }
 }
 
+export function lashTiming(hero: Hero): LashTiming {
+  return hero.quickLash ? QUICK_LASH : NORMAL_LASH;
+}
+
+export function whipReach(hero: Hero): number {
+  return hero.index > 0 ? INDEX.reach : WHIP.reach;
+}
+
 function advanceLash(hero: Hero, controls: Controls): void {
   if (hero.lash >= 0) {
-    hero.lash = hero.lash + 1 < LASH_FRAMES ? hero.lash + 1 : -1;
+    hero.lash = hero.lash + 1 < lashTiming(hero).total ? hero.lash + 1 : -1;
   }
   if (
     hero.lash < 0 &&
@@ -177,6 +219,7 @@ function advanceLash(hero: Hero, controls: Controls): void {
   ) {
     hero.lash = 0;
     hero.lashes += 1;
+    hero.quickLash = hero.cache > 0;
   }
 }
 
@@ -265,6 +308,8 @@ export function updateHero(hero: Hero, controls: Controls, level: Level): void {
   hero.stun = Math.max(hero.stun - 1, 0);
   hero.cast = Math.max(hero.cast - 1, 0);
   hero.dropThrough = Math.max(hero.dropThrough - 1, 0);
+  hero.index = Math.max(hero.index - 1, 0);
+  hero.cache = Math.max(hero.cache - 1, 0);
   crouch(hero, controls, level);
   advanceLash(hero, controls);
   steer(hero, controls);
@@ -281,15 +326,21 @@ export function updateHero(hero: Hero, controls: Controls, level: Level): void {
   hero.stride = hero.grounded && hero.vx !== 0 ? hero.stride + 1 : 0;
 }
 
-export function hurtHero(hero: Hero, amount: number, fromX: number): boolean {
+export function hurtHero(hero: Hero, amount: number, fromX: number): HitResult {
   if (hero.invulnerable > 0) {
-    return false;
+    return null;
+  }
+  if (hero.firewall > 0) {
+    hero.firewall -= 1;
+    hero.invulnerable = HURT.invulnerableFrames;
+    return "blocked";
   }
   const away = fromX > hero.x + hero.width / 2 ? -1 : 1;
   if (hero.cloud > 0) {
     endCloud(hero);
   }
-  hero.ram = Math.min(hero.ram + amount, RAM.crash);
+  const factor = hero.readme ? README.damageFactor : 1;
+  hero.ram = Math.min(hero.ram + amount * factor, RAM.crash);
   hero.invulnerable = HURT.invulnerableFrames;
   hero.stun = HURT.stunFrames;
   hero.lash = -1;
@@ -297,23 +348,31 @@ export function hurtHero(hero: Hero, amount: number, fromX: number): boolean {
   hero.vx = away * HURT.knockbackSpeed;
   hero.vy = -HURT.knockbackLift;
   hero.grounded = false;
-  return true;
+  return "hurt";
 }
 
 export function isCrashed(hero: Hero): boolean {
   return hero.ram >= RAM.crash;
 }
 
-export function lashReach(lash: number): number {
-  const strike = lash - WHIP.windupFrames;
+export function lashReach(
+  lash: number,
+  timing: LashTiming = NORMAL_LASH,
+  reach: number = WHIP.reach,
+): number {
+  const strike = lash - timing.windup;
   if (lash < 0 || strike < 0) {
     return 0;
   }
-  if (strike < WHIP.activeFrames) {
-    return (WHIP.reach * Math.min(strike + 1, EXTEND_FRAMES)) / EXTEND_FRAMES;
+  if (strike < timing.active) {
+    return (reach * Math.min(strike + 1, EXTEND_FRAMES)) / EXTEND_FRAMES;
   }
-  const recovered = strike - WHIP.activeFrames + 1;
-  return WHIP.reach * Math.max(1 - recovered / WHIP.recoverFrames, 0);
+  const recovered = strike - timing.active + 1;
+  return reach * Math.max(1 - recovered / timing.recover, 0);
+}
+
+export function heroLashReach(hero: Hero): number {
+  return lashReach(hero.lash, lashTiming(hero), whipReach(hero));
 }
 
 export function handY(hero: Hero): number {
@@ -321,11 +380,12 @@ export function handY(hero: Hero): number {
 }
 
 export function lashBox(hero: Hero, box: Box): boolean {
-  const strike = hero.lash - WHIP.windupFrames;
-  if (hero.lash < 0 || strike < 0 || strike >= WHIP.activeFrames) {
+  const timing = lashTiming(hero);
+  const strike = hero.lash - timing.windup;
+  if (hero.lash < 0 || strike < 0 || strike >= timing.active) {
     return false;
   }
-  const reach = lashReach(hero.lash);
+  const reach = heroLashReach(hero);
   box.width = reach;
   box.height = LASH_THICKNESS;
   box.x = hero.facing > 0 ? hero.x + hero.width : hero.x - reach;
@@ -357,7 +417,7 @@ export function startCast(hero: Hero): void {
 }
 
 function lashPose(hero: Hero): HeroPose {
-  const striking = hero.lash >= WHIP.windupFrames;
+  const striking = hero.lash >= lashTiming(hero).windup;
   if (hero.crouching) {
     return striking ? "crouchStrike" : "crouch";
   }

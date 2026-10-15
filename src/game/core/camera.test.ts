@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
+import { ENTRANCE } from "../levels/campaign";
 import { TILE, parseLevel } from "../levels/level";
-import { ENTRANCE } from "../levels/stage";
 import { VIEW_HEIGHT, VIEW_WIDTH, aimCamera, descend } from "./camera";
 
 const level = parseLevel(ENTRANCE);

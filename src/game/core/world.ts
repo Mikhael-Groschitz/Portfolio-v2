@@ -1,18 +1,27 @@
-import { PASSAGE_FRAMES, QUERY_ENERGY, RAM } from "../balance";
+import { PASSAGE_FRAMES, QUERY_ENERGY, RAM, RETRY } from "../balance";
 import {
   type Boss,
   type BossKind,
+  bossLine,
   createBoss,
   isCleared,
   isFighting,
-  isVulnerable,
+  linesSaid,
   resetBoss,
+  showsCard,
 } from "../entities/boss";
+import { updateDropKnight } from "../entities/drop-knight";
 import {
+  ENEMY_TRAITS,
   type Enemy,
+  type EnemyKind,
+  type Surroundings,
+  type Zone,
   centerX,
   createEnemies,
+  createZones,
   resetEnemy,
+  revive,
 } from "../entities/enemy";
 import {
   type Controls,
@@ -20,7 +29,6 @@ import {
   type Subweapon,
   activeSubweapon,
   createHero,
-  hurtHero,
   isCrashed,
   placeHero,
   updateHero,
@@ -28,26 +36,46 @@ import {
 import {
   type Container,
   type Drop,
+  type Pickup,
   type Relic,
   createContainers,
   createDrops,
+  createPickups,
   createRelics,
   updateDrops,
 } from "../entities/items";
 import {
+  type Mechanisms,
+  carry,
+  createMechanisms,
+  resetMechanisms,
+  updateMechanisms,
+} from "../entities/mechanisms";
+import {
   type Particle,
+  burst,
   createParticles,
   updateParticles,
 } from "../entities/particles";
 import {
+  FADE_SPARKS,
   type Projectile,
   createProjectiles,
   moveProjectile,
 } from "../entities/projectiles";
 import { updateSyntaxError } from "../entities/syntax-error";
+import type { VibeLine } from "../entities/vibe";
 import { updateWatchdog } from "../entities/watchdog";
+import { updateZombie } from "../entities/zombie";
+import {
+  type PlannedRoom,
+  type Slot,
+  type SlotSummary,
+  summarize,
+} from "../levels/campaign";
 import { type Cell, type Level, TILE } from "../levels/level";
-import { hitBoss, moveBoss } from "./bosses";
+import { moveBoss } from "./bosses";
+import { framesToMs } from "./clock";
 import {
   type Camera,
   VIEW_HEIGHT,
@@ -67,10 +95,19 @@ export type Mode =
 export type Notice =
   | "join"
   | "truncate"
+  | "drop"
+  | "firewall"
+  | "index"
+  | "cache"
+  | "backup"
+  | "readme"
   | "switch"
   | BossKind
   | "freed"
   | "rollback"
+  | "unmasked"
+  | "arrival"
+  | "savepoint"
   | "soundOn"
   | "soundOff";
 
@@ -79,16 +116,31 @@ export const STILL_INTRO_FRAMES = 90;
 export const INTRO_RISE = 220;
 
 const AWAKE_MARGIN = 48;
+const ENTRANCE_SPARKS = 8;
+const FADE_SPARK_COUNT = 4;
+
+const ENEMY_UPDATES: Readonly<
+  Record<EnemyKind, (enemy: Enemy, surroundings: Surroundings) => void>
+> = {
+  syntaxError: updateSyntaxError,
+  watchdog: updateWatchdog,
+  zombie: updateZombie,
+  dropKnight: updateDropKnight,
+};
 const CHECKPOINT_REACH = 3 * TILE;
 const DOORWAY = { inset: 8, width: 16, rows: 3 } as const;
 
 export interface Room {
   index: number;
+  slot: Slot;
   level: Level;
   doorway: Box | null;
   enemies: Enemy[];
+  zones: Zone[];
   containers: Container[];
   relics: Relic[];
+  pickups: Pickup[];
+  mechanisms: Mechanisms;
   boss: Boss | null;
 }
 
@@ -96,6 +148,15 @@ export interface Checkpoint {
   room: number;
   cell: Cell;
   mark: number;
+}
+
+export interface Entry {
+  ram: number;
+  energy: number;
+  subweapons: Subweapon[];
+  subweapon: number;
+  firewall: number;
+  readme: boolean;
 }
 
 export interface World {
@@ -110,6 +171,8 @@ export interface World {
   intro: number;
   playFrames: number;
   checkpoint: Checkpoint;
+  entry: Entry;
+  attempts: number;
   restY: number;
   tokens: number;
   drops: Drop[];
@@ -130,8 +193,17 @@ export interface BossHud {
   health: number;
 }
 
+export interface BoostHud {
+  firewall: boolean;
+  index: number;
+  cache: number;
+  readme: boolean;
+}
+
 export interface Hud {
   mode: Mode;
+  room: number;
+  slot: SlotSummary;
   ram: number;
   energy: number;
   subweapon: Subweapon;
@@ -139,6 +211,10 @@ export interface Hud {
   notice: Notice | null;
   notices: number;
   boss: BossHud | null;
+  card: boolean;
+  speech: VibeLine | null;
+  said: number;
+  boosts: BoostHud;
   muted: boolean;
 }
 
@@ -153,15 +229,31 @@ function doorwayOf({ exit }: Level): Box | null {
   );
 }
 
-function createRoom(level: Level, index: number): Room {
+function createRoom({ slot, level: plan }: PlannedRoom, index: number): Room {
+  const level = { ...plan, terrain: [...plan.terrain] };
   return {
     index,
+    slot,
     level,
     doorway: doorwayOf(level),
     enemies: createEnemies(level),
+    zones: createZones(level),
     containers: createContainers(level),
     relics: createRelics(level),
+    pickups: createPickups(level),
+    mechanisms: createMechanisms(level),
     boss: createBoss(level),
+  };
+}
+
+function snapshot(hero: Hero): Entry {
+  return {
+    ram: hero.ram,
+    energy: hero.energy,
+    subweapons: [...hero.subweapons],
+    subweapon: hero.subweapon,
+    firewall: hero.firewall,
+    readme: hero.readme,
   };
 }
 
@@ -171,22 +263,23 @@ function frameHero(world: World): void {
 }
 
 export function createWorld(
-  levels: readonly Level[],
+  planned: readonly PlannedRoom[],
   {
     reducedMotion,
     seed = 1,
     muted = false,
   }: Readonly<{ reducedMotion: boolean; seed?: number; muted?: boolean }>,
 ): World {
-  const rooms = levels.map(createRoom);
+  const rooms = planned.map(createRoom);
   const [first] = rooms;
   if (!first) {
-    throw new Error("The stage needs at least one room");
+    throw new Error("The campaign needs at least one room");
   }
+  const hero = createHero(first.level.start);
   const world: World = {
     rooms,
     room: first,
-    hero: createHero(first.level.start),
+    hero,
     camera: { x: 0, y: 0 },
     mode: "title",
     reducedMotion,
@@ -195,6 +288,8 @@ export function createWorld(
     intro: 0,
     playFrames: 0,
     checkpoint: { room: 0, cell: first.level.start, mark: -1 },
+    entry: snapshot(hero),
+    attempts: 0,
     restY: 0,
     tokens: 0,
     drops: createDrops(),
@@ -226,9 +321,16 @@ export function introProgress(world: World): number {
   return world.mode === "intro" ? world.intro / introLength(world) : 1;
 }
 
+function arrive(world: World): void {
+  if (world.room.slot.kind === "stage") {
+    announce(world, "arrival");
+  }
+}
+
 function finishIntro(world: World): void {
   world.mode = "playing";
   frameHero(world);
+  arrive(world);
 }
 
 export function startIntro(world: World): void {
@@ -264,10 +366,15 @@ function setCheckpoint(world: World, cell: Cell, mark: number): void {
   world.checkpoint.mark = mark;
 }
 
+function isQuiet(world: World): boolean {
+  return world.noticeFrames === 0 || world.notice === "arrival";
+}
+
 function reachCheckpoints(world: World): void {
   const { hero, checkpoint } = world;
   const places = world.room.level.places.checkpoint;
   const feet = hero.y + hero.height;
+  const reached = checkpoint.mark;
   for (let mark = checkpoint.mark + 1; mark < places.length; mark++) {
     const cell = places[mark];
     if (
@@ -277,6 +384,14 @@ function reachCheckpoints(world: World): void {
       setCheckpoint(world, cell, mark);
     }
   }
+  if (checkpoint.mark > reached && isQuiet(world)) {
+    announce(world, "savepoint");
+  }
+}
+
+export function isSaved(world: World, room: Room, mark: number): boolean {
+  const { checkpoint } = world;
+  return checkpoint.room === room.index && mark <= checkpoint.mark;
 }
 
 function checkCrash(world: World): void {
@@ -295,27 +410,57 @@ function isAwake(world: World, enemy: Enemy): boolean {
   );
 }
 
+function enter(world: World, enemy: Enemy): void {
+  const entrance = ENEMY_TRAITS[enemy.kind].entrances[enemy.state];
+  if (entrance?.cue) {
+    cue(world, entrance.cue);
+  }
+  if (entrance?.spark) {
+    burst(
+      world.particles,
+      world,
+      entrance.spark,
+      centerX(enemy),
+      enemy.y + enemy.height,
+      ENTRANCE_SPARKS,
+    );
+  }
+}
+
 function moveEnemies(world: World): void {
   for (const enemy of world.room.enemies) {
     if (!enemy.alive) {
       enemy.dying = Math.max(enemy.dying - 1, 0);
+      revive(enemy);
       continue;
     }
     if (!isAwake(world, enemy)) {
       continue;
     }
-    if (enemy.kind === "syntaxError") {
-      updateSyntaxError(enemy, world);
-    } else {
-      updateWatchdog(enemy, world);
+    const { state } = enemy;
+    ENEMY_UPDATES[enemy.kind](enemy, world);
+    if (enemy.state !== state) {
+      enter(world, enemy);
     }
   }
 }
 
 function moveProjectiles(world: World): void {
   for (const projectile of world.projectiles) {
-    if (projectile.active) {
-      moveProjectile(projectile, world.room.level, world.hero);
+    if (!projectile.active) {
+      continue;
+    }
+    moveProjectile(projectile, world.room.level, world.hero);
+    const spark = FADE_SPARKS[projectile.kind];
+    if (!projectile.active && spark) {
+      burst(
+        world.particles,
+        world,
+        spark,
+        projectile.x + projectile.width / 2,
+        projectile.y + projectile.height / 2,
+        FADE_SPARK_COUNT,
+      );
     }
   }
 }
@@ -331,9 +476,16 @@ function resetRoom(world: World, room: Room): void {
   for (const container of room.containers) {
     container.broken = false;
   }
+  for (const relic of room.relics) {
+    relic.taken = world.hero.subweapons.includes(relic.kind);
+  }
+  for (const pickup of room.pickups) {
+    pickup.taken = false;
+  }
   if (room.boss && !isCleared(room.boss)) {
     resetBoss(room.boss);
   }
+  resetMechanisms(room.mechanisms, room.level);
   clearPool(world.drops);
   clearPool(world.projectiles);
   clearPool(world.particles);
@@ -353,6 +505,20 @@ function nextRoom(world: World): Room | null {
   return world.rooms[world.room.index + 1] ?? null;
 }
 
+export function enterSlot(world: World, index: number): void {
+  const room = world.rooms[index];
+  if (!room) {
+    return;
+  }
+  const { hero } = world;
+  hero.ram = Math.min(hero.ram, RAM.entryCeiling);
+  world.entry = snapshot(hero);
+  world.attempts = 0;
+  enterRoom(world, room, room.level.start);
+  setCheckpoint(world, room.level.start, -1);
+  arrive(world);
+}
+
 function enterDoor(world: World): void {
   const { room, hero } = world;
   if (
@@ -370,8 +536,7 @@ function advancePassage(world: World): void {
   world.passage -= 1;
   const next = nextRoom(world);
   if (world.passage === PASSAGE_FRAMES / 2 && next) {
-    enterRoom(world, next, next.level.start);
-    setCheckpoint(world, next.level.start, -1);
+    enterSlot(world, next.index);
   }
 }
 
@@ -388,6 +553,8 @@ function play(world: World, controls: Controls): void {
   const { hero, room } = world;
   const { lashes, cloud } = hero;
   updateHero(hero, controls, room.level);
+  carry(room.mechanisms, room.level, hero);
+  updateMechanisms(room.mechanisms, room.level, hero);
   if (hero.lashes > lashes) {
     cue(world, "whip");
   }
@@ -437,42 +604,27 @@ export function retry(world: World): void {
   if (world.mode !== "crash") {
     return;
   }
-  const { hero, checkpoint } = world;
+  const { hero, checkpoint, entry } = world;
+  world.attempts += 1;
+  hero.ram = Math.max(
+    entry.ram - RETRY.relief * world.attempts,
+    Math.min(entry.ram, RETRY.floor),
+  );
+  hero.energy = Math.max(entry.energy, QUERY_ENERGY.start);
+  hero.subweapons = [...entry.subweapons];
+  hero.subweapon = entry.subweapon;
+  hero.firewall = entry.firewall;
+  hero.readme = entry.readme;
+  hero.index = 0;
+  hero.cache = 0;
   enterRoom(world, world.rooms[checkpoint.room], checkpoint.cell);
-  hero.ram = RAM.start;
-  hero.energy = Math.max(hero.energy, QUERY_ENERGY.start);
   world.passage = 0;
   world.mode = "playing";
-}
-
-export function overload(world: World): void {
-  if (world.mode !== "playing") {
-    return;
-  }
-  const { hero } = world;
-  hurtHero(hero, RAM.devOverload, hero.x + hero.width / 2 + hero.facing);
-  checkCrash(world);
 }
 
 export function toggleSound(world: World): void {
   world.muted = !world.muted;
   announce(world, world.muted ? "soundOff" : "soundOn");
-}
-
-export function skipAhead(world: World): void {
-  if (world.mode !== "playing" || world.passage > 0) {
-    return;
-  }
-  const { boss, level } = world.room;
-  if (boss && !isCleared(boss)) {
-    if (isVulnerable(boss)) {
-      hitBoss(world, boss, boss.health);
-    }
-    return;
-  }
-  if (level.exit) {
-    placeHero(world.hero, level.exit);
-  }
 }
 
 function cloudReady(hero: Hero): boolean {
@@ -481,6 +633,28 @@ function cloudReady(hero: Hero): boolean {
 
 function currentNotice(world: World): Notice | null {
   return world.noticeFrames > 0 ? world.notice : null;
+}
+
+function seconds(frames: number): number {
+  return Math.ceil(Math.round(framesToMs(frames)) / 1000);
+}
+
+function boostsOf(hero: Hero): BoostHud {
+  return {
+    firewall: hero.firewall > 0,
+    index: seconds(hero.index),
+    cache: seconds(hero.cache),
+    readme: hero.readme,
+  };
+}
+
+function boostsMatch(shown: BoostHud, hero: Hero): boolean {
+  return (
+    shown.firewall === hero.firewall > 0 &&
+    shown.index === seconds(hero.index) &&
+    shown.cache === seconds(hero.cache) &&
+    shown.readme === hero.readme
+  );
 }
 
 function shownBoss(world: World): Boss | null {
@@ -493,6 +667,11 @@ export function hudOf(world: World): Hud {
   const boss = shownBoss(world);
   return {
     mode: world.mode,
+    room: world.room.index,
+    slot: summarize(
+      world.rooms.map((room) => room.slot),
+      world.room.index,
+    ),
     ram: Math.round(hero.ram),
     energy: hero.energy,
     subweapon: activeSubweapon(hero),
@@ -500,6 +679,10 @@ export function hudOf(world: World): Hud {
     notice: currentNotice(world),
     notices: world.notices,
     boss: boss && { kind: boss.kind, health: boss.health },
+    card: boss !== null && showsCard(boss),
+    speech: boss && bossLine(boss),
+    said: boss ? linesSaid(boss) : 0,
+    boosts: boostsOf(hero),
     muted: world.muted,
   };
 }
@@ -513,8 +696,10 @@ function bossMatches(shown: BossHud | null, boss: Boss | null): boolean {
 
 export function hudMatches(hud: Hud, world: World): boolean {
   const { hero } = world;
+  const boss = shownBoss(world);
   return (
     hud.mode === world.mode &&
+    hud.room === world.room.index &&
     hud.ram === Math.round(hero.ram) &&
     hud.energy === hero.energy &&
     hud.subweapon === activeSubweapon(hero) &&
@@ -522,6 +707,10 @@ export function hudMatches(hud: Hud, world: World): boolean {
     hud.notice === currentNotice(world) &&
     hud.notices === world.notices &&
     hud.muted === world.muted &&
-    bossMatches(hud.boss, shownBoss(world))
+    boostsMatch(hud.boosts, hero) &&
+    bossMatches(hud.boss, boss) &&
+    hud.card === (boss !== null && showsCard(boss)) &&
+    hud.speech === (boss && bossLine(boss)) &&
+    hud.said === (boss ? linesSaid(boss) : 0)
   );
 }

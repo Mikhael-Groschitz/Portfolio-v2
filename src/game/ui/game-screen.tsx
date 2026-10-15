@@ -1,21 +1,33 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { type CSSProperties, useEffect, useId, useRef, useState } from "react";
 import { useLanguage } from "@/components/locale/language-context";
 import { prefersReducedMotion } from "@/components/preferences/preferences-runtime";
 import { formatElapsed } from "@/content/format";
-import { QUERY_ENERGY, RAM, SUBWEAPONS } from "../balance";
+import {
+  BACKUP,
+  CACHE,
+  INDEX,
+  QUERY_ENERGY,
+  RAM,
+  README,
+  SUBWEAPONS,
+} from "../balance";
 import { VIEW_HEIGHT, VIEW_WIDTH } from "../core/camera";
+import { framesToMs } from "../core/clock";
 import type { Mode } from "../core/world";
+import { CAMPAIGN, summarize } from "../levels/campaign";
 import { GAME_TITLE } from "../title";
 import { Hud } from "./hud";
 import { CrashPanel, PausePanel, TitlePanel, VictoryPanel } from "./panels";
-import { type Game, type GameHud, createGame } from "./runtime";
-import { GAME_TEXTS, type GameTexts } from "./texts";
+import { type Anchor, type Game, type GameHud, createGame } from "./runtime";
+import { GAME_TEXTS, type GameTexts, arrivalText, fill } from "./texts";
 import styles from "./game.module.css";
 
 const WAITING_HUD: GameHud = {
   mode: "title",
+  room: 0,
+  slot: summarize(CAMPAIGN, 0),
   ram: RAM.start,
   energy: QUERY_ENERGY.start,
   subweapon: "select",
@@ -23,27 +35,44 @@ const WAITING_HUD: GameHud = {
   notice: null,
   notices: 0,
   boss: null,
+  card: false,
+  speech: null,
+  said: 0,
+  boosts: { firewall: false, index: 0, cache: 0, readme: false },
   muted: false,
   playMs: 0,
   endedAt: null,
 };
 
+function seconds(frames: number): number {
+  return Math.round(framesToMs(frames) / 1000);
+}
+
 const PLAY_MODES: ReadonlySet<Mode> = new Set(["intro", "playing"]);
 
 function noticeText(hud: GameHud, text: GameTexts): string {
   switch (hud.notice) {
-    case "join":
-      return text.notices.join;
     case "truncate":
-      return text.notices.truncate.replace(
-        "{cost}",
-        String(SUBWEAPONS.truncate.cost),
-      );
+    case "drop":
+      return fill(text.notices[hud.notice], {
+        cost: SUBWEAPONS[hud.notice].cost,
+      });
+    case "index":
+      return fill(text.notices.index, { seconds: seconds(INDEX.frames) });
+    case "cache":
+      return fill(text.notices.cache, { seconds: seconds(CACHE.frames) });
+    case "backup":
+      return fill(text.notices.backup, { relief: BACKUP.relief });
+    case "readme":
+      return fill(text.notices.readme, {
+        percent: Math.round((1 - README.damageFactor) * 100),
+      });
     case "switch":
-      return text.notices.switch.replace(
-        "{name}",
-        text.subweapons[hud.subweapon],
-      );
+      return fill(text.notices.switch, {
+        name: text.subweapons[hud.subweapon],
+      });
+    case "arrival":
+      return arrivalText(hud.slot, text);
     case null:
       return "";
     default:
@@ -72,6 +101,36 @@ function announcementFor(hud: GameHud | null, text: GameTexts): string {
     default:
       return "";
   }
+}
+
+function placeSpeaker(stage: HTMLElement | null, anchor: Anchor): void {
+  stage?.style.setProperty("--speaker-x", String(anchor.x / VIEW_WIDTH));
+  stage?.style.setProperty("--speaker-y", String(anchor.y / VIEW_HEIGHT));
+}
+
+function BossCard({
+  name,
+  tagline,
+}: Readonly<{ name: string; tagline: string }>) {
+  return (
+    <div className={styles.card} aria-hidden="true">
+      <p className={styles.cardName}>{name}</p>
+      <p className={styles.cardTagline}>{tagline}</p>
+    </div>
+  );
+}
+
+function Speech({ line, paused }: Readonly<{ line: string; paused: boolean }>) {
+  return (
+    <p
+      className={styles.speech}
+      data-paused={paused || undefined}
+      style={{ "--length": [...line].length } as CSSProperties}
+      aria-hidden="true"
+    >
+      <span className={styles.typed}>{line}</span>
+    </p>
+  );
 }
 
 function nextIndex(current: number, count: number, backwards: boolean) {
@@ -145,6 +204,7 @@ export default function GameScreen({
     const game = createGame(canvas, {
       reducedMotion: prefersReducedMotion(),
       onHud: setHud,
+      onAnchor: (anchor) => placeSpeaker(stageRef.current, anchor),
       onExit: () => exitRef.current(),
     });
     gameRef.current = game;
@@ -224,6 +284,19 @@ export default function GameScreen({
             className={styles.canvas}
             aria-hidden="true"
           />
+          {shown.card && shown.boss && (
+            <BossCard
+              name={text.bosses[shown.boss.kind]}
+              tagline={text.taglines[shown.boss.kind]}
+            />
+          )}
+          {shown.speech && (
+            <Speech
+              key={shown.said}
+              line={text.vibe.lines[shown.speech]}
+              paused={shown.mode !== "playing"}
+            />
+          )}
           {shown.mode === "title" && (
             <TitlePanel {...panelProps} muted={shown.muted} />
           )}
@@ -243,11 +316,13 @@ export default function GameScreen({
             />
           )}
           {shown.mode === "intro" && <p className={styles.skip}>{text.skip}</p>}
-          {shown.mode === "playing" && shown.notice && (
-            <p className={styles.notice} aria-hidden="true">
-              {noticeText(shown, text)}
-            </p>
-          )}
+          {shown.mode === "playing" &&
+            shown.notice &&
+            shown.notice !== "arrival" && (
+              <p className={styles.notice} aria-hidden="true">
+                {noticeText(shown, text)}
+              </p>
+            )}
         </div>
       </div>
       <p className="visually-hidden" aria-live="polite">

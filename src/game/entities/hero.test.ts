@@ -1,5 +1,15 @@
 import { describe, expect, it } from "vitest";
-import { CAST_FRAMES, CLOUD, HURT, MOVEMENT, RAM, WHIP } from "../balance";
+import {
+  CACHE,
+  CAST_FRAMES,
+  CLOUD,
+  HURT,
+  INDEX,
+  MOVEMENT,
+  RAM,
+  README,
+  WHIP,
+} from "../balance";
 import type { Box } from "../core/collision";
 import { TILE, parseLevel } from "../levels/level";
 import {
@@ -8,10 +18,12 @@ import {
   type Hero,
   LASH_FRAMES,
   NO_CONTROLS,
+  QUICK_LASH,
   activeSubweapon,
   createHero,
   cycleSubweapon,
   grantSubweapon,
+  heroLashReach,
   heroPose,
   hurtHero,
   isCrashed,
@@ -155,6 +167,40 @@ describe("network cable whip", () => {
     );
     expect(lashReach(LASH_FRAMES - 1)).toBe(0);
   });
+
+  it("comes out and back faster while the Cache is warm", () => {
+    const hero = heroAt(4);
+    hero.cache = CACHE.frames;
+    run(hero, 1, { attackPressed: true });
+    expect(hero.quickLash).toBe(true);
+    expect(QUICK_LASH.total).toBeLessThan(LASH_FRAMES);
+    run(hero, QUICK_LASH.total);
+    expect(hero.lash).toBe(-1);
+    hero.cache = 0;
+    run(hero, 1, { attackPressed: true });
+    run(hero, QUICK_LASH.total - 1);
+    expect(hero.lash).toBeGreaterThan(0);
+  });
+
+  it("reaches further while the Index is built", () => {
+    const hero = heroAt(4);
+    hero.index = INDEX.frames;
+    run(hero, 1, { attackPressed: true });
+    run(hero, WHIP.windupFrames + 1);
+    expect(heroLashReach(hero)).toBe(INDEX.reach);
+    const box: Box = { x: 0, y: 0, width: 0, height: 0 };
+    expect(lashBox(hero, box)).toBe(true);
+    expect(box.width).toBe(INDEX.reach);
+  });
+
+  it("lets the Index and the Cache run out after their time", () => {
+    const hero = heroAt(4);
+    hero.index = 3;
+    hero.cache = 5;
+    run(hero, 4);
+    expect(hero.index).toBe(0);
+    expect(hero.cache).toBe(1);
+  });
 });
 
 describe("RAM and damage", () => {
@@ -164,15 +210,15 @@ describe("RAM and damage", () => {
 
   it("raises the RAM, knocks the hero back and protects for a second", () => {
     const hero = heroAt(6);
-    expect(hurtHero(hero, 20, hero.x + 30)).toBe(true);
+    expect(hurtHero(hero, 20, hero.x + 30)).toBe("hurt");
     expect(hero.ram).toBe(RAM.start + 20);
     expect(hero.vx).toBeLessThan(0);
     expect(hero.facing).toBe(1);
     expect(heroPose(hero)).toBe("hurt");
-    expect(hurtHero(hero, 20, hero.x + 30)).toBe(false);
+    expect(hurtHero(hero, 20, hero.x + 30)).toBeNull();
     expect(hero.ram).toBe(RAM.start + 20);
     run(hero, HURT.invulnerableFrames);
-    expect(hurtHero(hero, 20, hero.x - 30)).toBe(true);
+    expect(hurtHero(hero, 20, hero.x - 30)).toBe("hurt");
     expect(hero.vx).toBeGreaterThan(0);
   });
 
@@ -184,6 +230,26 @@ describe("RAM and damage", () => {
     expect(hero.x).toBeLessThan(knocked);
     run(hero, 10, { right: true });
     expect(hero.vx).toBe(MOVEMENT.walkSpeed);
+  });
+
+  it("lets the Firewall take one hit and then go away", () => {
+    const hero = heroAt(6);
+    hero.firewall = 1;
+    expect(hurtHero(hero, 20, hero.x + 30)).toBe("blocked");
+    expect(hero.ram).toBe(RAM.start);
+    expect(hero.firewall).toBe(0);
+    expect(hero.stun).toBe(0);
+    expect(hero.invulnerable).toBe(HURT.invulnerableFrames);
+    run(hero, HURT.invulnerableFrames);
+    expect(hurtHero(hero, 20, hero.x + 30)).toBe("hurt");
+    expect(hero.ram).toBe(RAM.start + 20);
+  });
+
+  it("takes a fifth less RAM after reading the README", () => {
+    const hero = heroAt(6);
+    hero.readme = true;
+    hurtHero(hero, 10, hero.x + 30);
+    expect(hero.ram).toBeCloseTo(RAM.start + 10 * README.damageFactor);
   });
 
   it("never goes past the crash line", () => {

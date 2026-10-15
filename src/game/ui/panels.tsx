@@ -1,6 +1,7 @@
 import type { RefObject } from "react";
 import { SuccessIcon, WarningIcon } from "@/components/icons";
 import { formatCompletionTime, formatElapsed } from "@/content/format";
+import { BOSS_KINDS } from "../entities/boss";
 import type { GameTexts } from "./texts";
 import styles from "./game.module.css";
 
@@ -119,6 +120,14 @@ export function VictoryPanel({
   return (
     <div className={`${styles.panel} ${styles.crashPanel}`}>
       <div className={styles.messages}>
+        <dl className={styles.defeated}>
+          {BOSS_KINDS.map((kind) => (
+            <div key={kind} className={styles.defeatedRow}>
+              <dt>{text.bosses[kind]}</dt>
+              <dd>{victory.bosses[kind]}</dd>
+            </div>
+          ))}
+        </dl>
         <p>{victory.rows}</p>
         <p>{victory.message}</p>
         <p>

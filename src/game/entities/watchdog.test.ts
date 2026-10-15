@@ -21,12 +21,13 @@ const ROOM = parseLevel([
 ]);
 
 function setup() {
+  const enemies = createEnemies(ROOM);
   const surroundings: Surroundings = {
-    room: { level: ROOM },
+    room: { level: ROOM, enemies, zones: [] },
     hero: createHero({ column: 12, row: 9 }),
     projectiles: createProjectiles(),
   };
-  const [watchdog] = createEnemies(ROOM);
+  const [watchdog] = enemies;
   return { surroundings, watchdog };
 }
 

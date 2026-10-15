@@ -84,17 +84,40 @@
   font-variant-numeric: tabular-nums;
 }
 
-.bossBar {
+.amount {
+  display: inline-block;
+  min-inline-size: 4ch;
+  text-align: end;
+}
+
+.amount[data-meter="uptime"] {
+  min-inline-size: 7ch;
+}
+
+.statusRow {
   display: flex;
   flex-basis: 100%;
+  flex-wrap: wrap;
   align-items: center;
-  justify-content: flex-end;
-  gap: 12px;
+  gap: 6px 12px;
   min-height: 20px;
 }
 
-.bossBar[data-hidden] {
-  visibility: hidden;
+.bossGroup {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  margin-inline-start: auto;
+}
+
+.location {
+  color: var(--text);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.stageName {
+  color: var(--text-muted);
 }
 
 .bossName {
@@ -134,12 +157,52 @@
   flex: none;
 }
 
+.slot {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  inline-size: 20px;
+  block-size: 20px;
+}
+
+.subweaponName {
+  min-inline-size: 8ch;
+}
+
 .subweapon[data-subweapon="join"] {
   color: var(--syntax-function);
 }
 
 .subweapon[data-subweapon="truncate"] {
   color: var(--syntax-string);
+}
+
+.subweapon[data-subweapon="drop"] {
+  color: var(--syntax-number);
+}
+
+.boost {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text);
+}
+
+.boost[data-boost="firewall"] {
+  color: var(--syntax-string);
+}
+
+.boost[data-boost="index"] {
+  color: var(--syntax-comment);
+}
+
+.boost[data-boost="cache"] {
+  color: var(--status-connected);
+}
+
+.boost[data-boost="readme"] {
+  color: var(--syntax-keyword);
 }
 
 .cloud,
@@ -284,6 +347,27 @@
   color: var(--text-error);
 }
 
+.defeated {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 2px 16px;
+  margin: 0 0 12px;
+}
+
+.defeatedRow {
+  display: contents;
+}
+
+.defeatedRow dt {
+  color: var(--syntax-keyword);
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.defeatedRow dd {
+  margin: 0;
+}
+
 .statusBar {
   display: flex;
   align-items: center;
@@ -356,6 +440,107 @@
   font-size: 13px;
   text-align: center;
   transform: translateX(-50%);
+}
+
+.card {
+  position: absolute;
+  top: 10%;
+  left: 50%;
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 8px 24px;
+  border: 1px solid var(--syntax-string);
+  border-inline-width: 4px;
+  background: var(--bg-window);
+  text-align: center;
+  transform: translateX(-50%);
+  animation: card-in 300ms ease-out both;
+  pointer-events: none;
+}
+
+.cardName {
+  margin: 0;
+  color: var(--syntax-string);
+  font-size: clamp(18px, 3vw, 28px);
+  font-weight: 700;
+  letter-spacing: 0.12em;
+}
+
+.cardTagline {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 13px;
+}
+
+@keyframes card-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -8px);
+  }
+}
+
+.speech {
+  position: absolute;
+  top: calc(var(--speaker-y, 0.5) * 100%);
+  left: calc(var(--speaker-x, 0.5) * 100%);
+  box-sizing: content-box;
+  width: calc(var(--length) * 1ch);
+  margin: 0;
+  padding: 4px 8px;
+  border: 1px solid var(--text);
+  border-radius: 6px;
+  background: var(--bg-window);
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.4;
+  transform: translate(calc(var(--speaker-x, 0.5) * -100%), calc(-100% - 8px));
+  pointer-events: none;
+}
+
+.speech::before,
+.speech::after {
+  position: absolute;
+  left: calc(var(--speaker-x, 0.5) * 100%);
+  border-style: solid;
+  border-color: transparent;
+  content: "";
+  transform: translateX(-50%);
+}
+
+.speech::before {
+  top: 100%;
+  border-width: 7px 6px 0;
+  border-top-color: var(--text);
+}
+
+.speech::after {
+  top: calc(100% - 1px);
+  border-width: 6px 5px 0;
+  border-top-color: var(--bg-window);
+}
+
+.typed {
+  display: block;
+  width: calc(var(--length) * 1ch);
+  overflow: hidden;
+  white-space: nowrap;
+  animation: typing calc(var(--length) * 35ms) steps(var(--length), end) both;
+}
+
+.speech[data-paused] .typed {
+  animation-play-state: paused;
+}
+
+@keyframes typing {
+  from {
+    width: 0;
+  }
+}
+
+:global(html[data-motion="reduce"]) .card,
+:global(html[data-motion="reduce"]) .typed {
+  animation: none;
 }
 
 .skip {

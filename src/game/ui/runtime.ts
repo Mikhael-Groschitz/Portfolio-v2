@@ -7,18 +7,18 @@ import {
   createWorld,
   hudMatches,
   hudOf,
-  overload,
   pause,
   resume,
   retry,
-  skipAhead,
   skipIntro,
   startIntro,
   step,
   toggleSound,
 } from "../core/world";
-import { parseStage } from "../levels/stage";
+import type { DevTools } from "../dev/tools";
+import { parseCampaign } from "../levels/campaign";
 import { createArt } from "../render/art";
+import { speakerSpot } from "../render/boss-poses";
 import { render } from "../render/render";
 import { readMuted, rememberMuted } from "./sound-preference";
 
@@ -27,9 +27,15 @@ export interface GameHud extends Hud {
   endedAt: number | null;
 }
 
+export interface Anchor {
+  x: number;
+  y: number;
+}
+
 export interface GameOptions {
   reducedMotion: boolean;
   onHud: (hud: GameHud) => void;
+  onAnchor: (anchor: Anchor) => void;
   onExit: () => void;
 }
 
@@ -60,22 +66,26 @@ function confirm(world: World): void {
 
 export function createGame(
   canvas: HTMLCanvasElement,
-  { reducedMotion, onHud, onExit }: GameOptions,
+  { reducedMotion, onHud, onAnchor, onExit }: GameOptions,
 ): Game {
   const context = canvas.getContext("2d");
-  const levels = parseStage();
-  const world = createWorld(levels, {
+  const rooms = parseCampaign();
+  let world = createWorld(rooms, {
     reducedMotion,
     seed: Date.now(),
     muted: readMuted(),
   });
   const audio = createGameAudio();
-  const art = createArt(levels);
+  let art = createArt(rooms);
   let frame = 0;
   let last = 0;
   let lag = 0;
   let running = false;
+  let alive = true;
+  let dev: DevTools | null = null;
   let shown: GameHud | null = null;
+  const spot: Anchor = { x: 0, y: 0 };
+  const anchored: Anchor = { x: Number.NaN, y: Number.NaN };
 
   function publish() {
     if (shown && hudMatches(shown, world)) {
@@ -88,6 +98,18 @@ export function createGame(
       endedAt: ended ? Date.now() : null,
     };
     onHud(shown);
+  }
+
+  function anchor() {
+    if (
+      !speakerSpot(world.room.boss, world.camera, spot) ||
+      (anchored.x === spot.x && anchored.y === spot.y)
+    ) {
+      return;
+    }
+    anchored.x = spot.x;
+    anchored.y = spot.y;
+    onAnchor(spot);
   }
 
   function command(action: Action) {
@@ -119,12 +141,6 @@ export function createGame(
       case "retry":
         retry(world);
         break;
-      case "overload":
-        overload(world);
-        break;
-      case "skip":
-        skipAhead(world);
-        break;
       default:
         return;
     }
@@ -133,6 +149,29 @@ export function createGame(
   }
 
   const keyboard = attachKeyboard(window, command);
+
+  function refresh() {
+    if (world.mode !== "title") {
+      audio.start();
+    }
+    audio.sync(world);
+    publish();
+  }
+
+  function show(next: World) {
+    world = next;
+    art = createArt(next.rooms);
+    shown = null;
+    refresh();
+  }
+
+  if (process.env.NODE_ENV !== "production") {
+    void import("../dev/tools").then(({ attachDevTools }) => {
+      if (alive) {
+        dev = attachDevTools({ current: () => world, show, refresh });
+      }
+    });
+  }
 
   function leave() {
     keyboard.release();
@@ -156,11 +195,13 @@ export function createGame(
     last = now;
     while (lag >= STEP_MS) {
       step(world, keyboard.controls());
+      dev?.afterStep();
       lag -= STEP_MS;
     }
     if (context) {
       render(context, world, art);
     }
+    anchor();
     audio.sync(world);
     publish();
   }
@@ -179,6 +220,9 @@ export function createGame(
     command,
     destroy() {
       running = false;
+      alive = false;
+      dev?.detach();
+      dev = null;
       window.cancelAnimationFrame(frame);
       audio.close();
       keyboard.detach();

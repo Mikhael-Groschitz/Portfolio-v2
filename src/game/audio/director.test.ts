@@ -6,14 +6,14 @@ import {
   skipIntro,
   startIntro,
 } from "../core/world";
+import { parseCampaign } from "../levels/campaign";
 import { TILE } from "../levels/level";
-import { parseStage } from "../levels/stage";
 import { chooseTrack } from "./director";
 
-const levels = parseStage();
+const rooms = parseCampaign();
 
 function playing(): World {
-  const world = createWorld(levels, { reducedMotion: false });
+  const world = createWorld(rooms, { reducedMotion: false });
   startIntro(world);
   skipIntro(world);
   return world;
@@ -27,7 +27,7 @@ function inRoom(index: number): World {
 
 describe("music director", () => {
   it("stays silent on the title and plays the title theme over the opening", () => {
-    const world = createWorld(levels, { reducedMotion: false });
+    const world = createWorld(rooms, { reducedMotion: false });
     expect(chooseTrack(world, null)).toBeNull();
     startIntro(world);
     expect(chooseTrack(world, null)).toBe("title");
@@ -43,24 +43,35 @@ describe("music director", () => {
     expect(chooseTrack(world, "stage")).toBe("stage");
   });
 
-  it("follows the Garbage Collector fight from start to finish", () => {
-    const world = inRoom(1);
-    const boss = world.room.boss;
-    if (!boss) {
-      throw new Error("The room needs a boss");
+  it("follows the first two boss fights from start to finish", () => {
+    for (const [index, fighting, theme] of [
+      [2, "walk", "vibe"],
+      [5, "hover", "boss"],
+    ] as const) {
+      const world = inRoom(index);
+      const boss = world.room.boss;
+      if (!boss) {
+        throw new Error("The room needs a boss");
+      }
+      expect(chooseTrack(world, "stage")).toBe("stage");
+      boss.state = fighting;
+      expect(chooseTrack(world, "stage")).toBe(theme);
+      boss.state = "defeat";
+      expect(chooseTrack(world, "boss")).toBeNull();
+      boss.state = "gone";
+      expect(chooseTrack(world, null)).toBe("stage");
     }
-    expect(chooseTrack(world, "stage")).toBe("stage");
-    boss.state = "hover";
-    expect(chooseTrack(world, "stage")).toBe("boss");
-    boss.state = "defeat";
-    expect(chooseTrack(world, "boss")).toBeNull();
-    boss.state = "gone";
-    expect(chooseTrack(world, null)).toBe("stage");
+  });
+
+  it("plays each stage its own take on the stage music", () => {
+    expect(
+      [1, 3, 4, 6, 7].map((index) => chooseTrack(inRoom(index), "title")),
+    ).toEqual(["catacombs", "tapes", "lab", "stage", "cron"]);
   });
 
   it("plays the stage up the staircase and waits in silence before the throne", () => {
-    expect(chooseTrack(inRoom(2), "stage")).toBe("stage");
-    const throne = inRoom(3);
+    expect(chooseTrack(inRoom(6), "stage")).toBe("stage");
+    const throne = inRoom(8);
     const boss = throne.room.boss;
     if (!boss) {
       throw new Error("The room needs a boss");

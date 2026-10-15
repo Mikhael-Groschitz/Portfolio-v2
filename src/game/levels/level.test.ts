@@ -19,14 +19,21 @@ import {
   parseLevel,
   terrainAt,
 } from "./level";
-import {
-  COLLECTOR_ROOM,
-  HALL_OF_RACKS,
-  LOG_CORRIDOR,
-  STAIRCASE,
-  THRONE_ROOM,
-} from "./rooms";
-import { STAGE, parseStage } from "./stage";
+import { parseCampaign } from "./campaign";
+import { HALL_OF_RACKS, LOG_CORRIDOR } from "./rooms";
+
+const levels = parseCampaign().map((room) => room.level);
+const ROOM = {
+  entrance: 0,
+  catacombs: 1,
+  vibe: 2,
+  tapes: 3,
+  lab: 4,
+  collector: 5,
+  staircase: 6,
+  cron: 7,
+  throne: 8,
+} as const;
 
 describe("parseLevel", () => {
   it("reads terrain and markers from strings", () => {
@@ -49,19 +56,32 @@ describe("parseLevel", () => {
   });
 
   it("collects every kind of place", () => {
-    const level = parseLevel(["SxofujtCWGLABTsE", "################"]);
+    const level = parseLevel([
+      "SxozkfurjtdwicbmCWGLAVBTsE",
+      "##########################",
+    ]);
     for (const place of [
       "syntaxError",
       "watchdog",
+      "zombie",
+      "dropKnight",
       "disk",
       "pen",
+      "tape",
       "join",
       "truncate",
+      "drop",
+      "firewall",
+      "index",
+      "cache",
+      "backup",
+      "readme",
       "checkpoint",
       "window",
       "gargoyle",
       "log",
       "arch",
+      "vibe",
       "collector",
       "throne",
       "summon",
@@ -80,6 +100,7 @@ describe("parseLevel", () => {
     [["   E", "####"], 'exactly one "S"'],
     [["S EE", "####"], 'at most one "E"'],
     [["SDDE", "####"], 'at most one "D"'],
+    [["SVVE", "####"], 'at most one "V"'],
     [["SBBE", "####"], 'at most one "B"'],
     [["STTE", "####"], 'at most one "T"'],
     [["S ?E", "####"], 'Unknown symbol "?"'],
@@ -113,7 +134,7 @@ function exitOf(level: Level): Cell {
 }
 
 describe("entrance", () => {
-  const [level] = parseStage();
+  const level = levels[ROOM.entrance];
   const { places } = level;
 
   it("keeps every row of every segment at the same width", () => {
@@ -126,10 +147,10 @@ describe("entrance", () => {
     );
   });
 
-  it("starts outside the gate and ends at the GC door inside the castle", () => {
+  it("starts outside the gate and ends at the BKP door inside the castle", () => {
     const exit = exitOf(level);
     expect(level.gate).not.toBeNull();
-    expect(level.plaque).toBe("GC");
+    expect(level.plaque).toBe("BKP");
     expect(isIndoors(level, level.start.column)).toBe(false);
     expect(isIndoors(level, exit.column)).toBe(true);
     expect(exit.column).toBeGreaterThan(HALL_OF_RACKS[0].length);
@@ -172,34 +193,17 @@ describe("entrance", () => {
   });
 });
 
-describe("stage", () => {
-  const levels = parseStage();
-  const [, collector, staircase, throne] = levels;
+describe("campaign rooms", () => {
+  const vibe = levels[ROOM.vibe];
+  const collector = levels[ROOM.collector];
+  const staircase = levels[ROOM.staircase];
+  const throne = levels[ROOM.throne];
 
-  it("runs from the entrance to the throne room through four rooms", () => {
-    expect(STAGE.map(({ map }) => map)).toEqual([
-      joinSegments(HALL_OF_RACKS, LOG_CORRIDOR),
-      COLLECTOR_ROOM,
-      STAIRCASE,
-      THRONE_ROOM,
-    ]);
-    expect(levels.slice(0, -1).every((level) => level.exit !== null)).toBe(
-      true,
-    );
-    expect(throne.exit).toBeNull();
-  });
-
-  it("puts one boss in the Garbage Collector room and one on the throne", () => {
-    expect(collector.places.collector).toHaveLength(1);
-    expect(throne.places.throne).toHaveLength(1);
+  it("gives the final boss the minions it calls", () => {
     expect(throne.places.summon.length).toBeGreaterThanOrEqual(2);
-    for (const level of [levels[0], staircase]) {
-      expect(level.places.collector).toHaveLength(0);
-      expect(level.places.throne).toHaveLength(0);
-    }
   });
 
-  it("stands every start, exit, checkpoint, relic and walker on the floor", () => {
+  it("stands every start, exit, checkpoint, relic, walker and boss on the floor", () => {
     for (const level of levels) {
       const { places } = level;
       for (const cell of [
@@ -209,7 +213,16 @@ describe("stage", () => {
         ...places.join,
         ...places.truncate,
         ...places.syntaxError,
+        ...places.zombie,
+        ...places.dropKnight,
+        ...places.drop,
+        ...places.firewall,
+        ...places.index,
+        ...places.cache,
+        ...places.backup,
+        ...places.readme,
         ...places.summon,
+        ...places.vibe,
         ...places.throne,
       ]) {
         expect(isFloor(level, cell.column, cell.row + 1)).toBe(true);
@@ -219,6 +232,7 @@ describe("stage", () => {
   });
 
   it("keeps the boss arenas one screen wide and the staircase tall", () => {
+    expect(vibe.width).toBe(320);
     expect(collector.width).toBe(320);
     expect(throne.width).toBe(320);
     expect(staircase.height).toBeGreaterThan(2 * 180);
@@ -301,17 +315,26 @@ function doorway(cell: Cell): Box {
 }
 
 describe("routes", () => {
-  const levels = parseStage();
-
   it("lets the Admin climb the staircase from the bottom door to the top door", () => {
-    const staircase = levels[2];
+    const staircase = levels[ROOM.staircase];
     expect(canReach(staircase, doorway(exitOf(staircase)))).toBe(true);
   });
 
-  it("lets the Admin cross both boss rooms on foot", () => {
-    expect(canReach(levels[1], doorway(exitOf(levels[1])))).toBe(true);
-    const [seat] = levels[3].places.throne;
-    expect(canReach(levels[3], doorway(seat))).toBe(true);
+  it("lets the Admin cross every new stage and every boss room on foot", () => {
+    for (const index of [
+      ROOM.catacombs,
+      ROOM.vibe,
+      ROOM.tapes,
+      ROOM.lab,
+      ROOM.collector,
+      ROOM.cron,
+    ]) {
+      const level = levels[index];
+      expect(canReach(level, doorway(exitOf(level))), String(index)).toBe(true);
+    }
+    const throne = levels[ROOM.throne];
+    const [seat] = throne.places.throne;
+    expect(canReach(throne, doorway(seat))).toBe(true);
   });
 
   it("does not find a way through a wall", () => {

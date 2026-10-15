@@ -1,6 +1,7 @@
 import { type Level, TERRAIN, isSolid, terrainAt } from "../levels/level";
 import { textRows } from "./font";
-import { type SpriteRows, outline, stamp } from "./sprite";
+import { BELT } from "./stage-art";
+import { type SpriteRows, blank, outline, pad, stamp } from "./sprite";
 
 export interface Led {
   x: number;
@@ -38,6 +39,8 @@ const STONE_ROWS = [
 ];
 
 const STONE: TileArt = { rows: STONE_ROWS, leds: [] };
+
+const BELT_TILE: TileArt = { rows: BELT, leds: [] };
 
 const STONE_LED: TileArt = { rows: STONE_ROWS, leds: [led(15, 3), led(7, 11)] };
 
@@ -308,6 +311,40 @@ export const LOG_PANEL: SpriteRows = [
   "..5555555555555555555555555555..",
 ];
 
+export const SAVEPOINT: SpriteRows = [
+  ".kkkkkkkkkkkk.",
+  "k766666666667k",
+  "k6kkkkkkkkkk6k",
+  "k6knnnnnnnnk6k",
+  "k6knnnnnnnnk6k",
+  "k6knnnnnnnnk6k",
+  "k6knnnnnnnnk6k",
+  "k6knnnnnnnnk6k",
+  "k6kkkkkkkkkk6k",
+  "k6666666rr666k",
+  "k788888888887k",
+  ".kkkkk77kkkkk.",
+  ".....k78k.....",
+  ".....k78k.....",
+  "...kkk78kkk...",
+  "..k54444445k..",
+  ".k5444444445k.",
+  ".k5555555555k.",
+  ".kkkkkkkkkkkk.",
+];
+
+export const SAVEPOINT_SCREEN: SpriteRows = [
+  "gg.ggg..",
+  "........",
+  "ggg.gg.g",
+  "........",
+  "w.......",
+  "........",
+  ".....RR.",
+];
+
+export const SAVEPOINT_SCREEN_AT = { x: 3, y: 3 } as const;
+
 const PLATE = [
   "77777777777",
   "71111111117",
@@ -328,6 +365,128 @@ export function doorPlaque(text: string): string[] {
   );
   return outline(stamp(plate, letters, 2, 2));
 }
+
+const SCREEN_SIZE = { width: 48, height: 30 } as const;
+const SLIDE_SIZE = { width: 40, height: 20 } as const;
+const SLIDE_OFFSET = { x: 4, y: 6 } as const;
+const BAR = { width: 3, step: 5 } as const;
+
+export const SLIDE_AT = {
+  x: SLIDE_OFFSET.x + 1,
+  y: SLIDE_OFFSET.y + 1,
+} as const;
+
+const CHECK = [
+  ".........gg",
+  "........ggg",
+  ".......ggg.",
+  "gg....ggg..",
+  "ggg..ggg...",
+  ".ggggggg...",
+  "..ggggg....",
+  "...ggg.....",
+];
+
+const WARNING = [
+  ".....y.....",
+  "....yyy....",
+  "....yky....",
+  "...yykyy...",
+  "...yykyy...",
+  "..yyykyyy..",
+  "..yyyyyyy..",
+  ".yyyykyyyy.",
+  "yyyyyyyyyyy",
+];
+
+function fill(
+  rows: SpriteRows,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  paint: string,
+): string[] {
+  return stamp(
+    rows,
+    Array.from({ length: height }, () => paint.repeat(width)),
+    x,
+    y,
+  );
+}
+
+function chart(heights: readonly number[], paints: string): string[] {
+  const tallest = Math.max(...heights);
+  return heights.reduce<string[]>(
+    (rows, height, index) =>
+      fill(
+        rows,
+        index * BAR.step,
+        tallest - height,
+        BAR.width,
+        height,
+        paints[index],
+      ),
+    blank(heights.length * BAR.step, tallest),
+  );
+}
+
+function slide(
+  background: string,
+  title: string,
+  heights: readonly number[],
+  paints: string,
+  mark: SpriteRows,
+): string[] {
+  const { width, height } = SLIDE_SIZE;
+  const bars = chart(heights, paints);
+  let rows = fill(blank(width, height), 0, 0, width, height, background);
+  rows = fill(rows, 0, 0, width, 3, title);
+  rows = stamp(rows, ["wwww.wwwwww.www"], 2, 1);
+  rows = stamp(rows, bars, 3, height - 2 - bars.length);
+  rows = fill(rows, 2, height - 2, 22, 1, "h");
+  return stamp(
+    rows,
+    mark,
+    width - mark[0].length - 3,
+    height - mark.length - 4,
+  );
+}
+
+export const ALERT_SLIDE = slide("r", "R", [13, 10, 6, 3], "RRRR", WARNING);
+
+function screen(): string[] {
+  const { width, height } = SCREEN_SIZE;
+  let rows = blank(width, height);
+  rows = fill(rows, 1, 0, width - 2, 3, "6");
+  rows = fill(rows, 2, 1, width - 4, 1, "8");
+  rows = fill(rows, 2, 3, width - 4, 24, "k");
+  rows = fill(rows, 3, 4, width - 6, 22, "o");
+  rows = fill(rows, 3, 26, width - 6, 1, "q");
+  rows = fill(rows, 3, 27, width - 6, 2, "6");
+  return stamp(
+    rows,
+    slide("d", "b", [4, 7, 10, 13], "bgvy", CHECK),
+    SLIDE_OFFSET.x,
+    SLIDE_OFFSET.y,
+  );
+}
+
+export const PROJECTOR = outline(pad(screen()));
+
+export const SPOTLIGHT = outline(
+  pad([
+    "...66...",
+    "..6776..",
+    ".677776.",
+    ".678876.",
+    ".677776.",
+    "..qooq..",
+    "..oooo..",
+  ]),
+);
+
+export const LENS = { x: 5, y: 8 } as const;
 
 export const MERLON: SpriteRows = [
   "55555555........",
@@ -359,6 +518,9 @@ export function tileArt(
         : RACK_TOP;
     case TERRAIN.ledge:
       return LEDGE;
+    case TERRAIN.beltLeft:
+    case TERRAIN.beltRight:
+      return BELT_TILE;
     case TERRAIN.stone: {
       if (openAbove && row > 0) {
         return STONE_TOP;

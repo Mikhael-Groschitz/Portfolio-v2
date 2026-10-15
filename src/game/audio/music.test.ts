@@ -101,6 +101,42 @@ describe("music", () => {
     expect(TRACKS.defeat.loop || TRACKS.victory.loop).toBe(false);
   });
 
+  it("gives the first boss a lighter, slower march in F major", () => {
+    expect(SCORES.vibe.tempo).toBeLessThan(SCORES.boss.tempo);
+    expect(TRACKS.vibe.loop).toBe(true);
+    for (const beat of [1, TRACKS.vibe.length - 3]) {
+      expect([...chordAt("vibe", beat)]).toEqual(
+        expect.arrayContaining([5, 9, 0]),
+      );
+    }
+  });
+
+  it("gives every new stage its own take on the stage theme, from the same notes", () => {
+    const takes = ["catacombs", "tapes", "lab", "cron"] as const;
+    const base = SCORES.stage;
+    const classes = (notes: readonly (readonly [unknown, number])[]) =>
+      notes.flatMap(([sound]) =>
+        typeof sound === "string" ? [midiOf(sound) % 12] : [],
+      );
+    for (const name of takes) {
+      const take = SCORES[name];
+      expect(partLength(take.parts[0]), name).toBe(partLength(base.parts[0]));
+      expect(classes(take.parts[0].notes), name).toEqual(
+        classes(base.parts[0].notes),
+      );
+      expect(TRACKS[name].loop, name).toBe(true);
+    }
+    expect(SCORES.catacombs.tempo).toBeLessThan(base.tempo);
+    expect(SCORES.tapes.tempo).toBeGreaterThan(base.tempo);
+    expect(SCORES.lab.parts[0].notes.length).toBeGreaterThan(
+      base.parts[0].notes.length,
+    );
+    expect(SCORES.cron.parts.length).toBeGreaterThan(base.parts.length);
+    expect(
+      new Set(takes.map((name) => JSON.stringify(SCORES[name]))).size,
+    ).toBe(takes.length);
+  });
+
   it("holds the title over a tonic pedal, almost a drone", () => {
     const pedal = TRACKS.title.events.filter((event) => event.stop === "pedal");
     expect(pedal).toHaveLength(1);

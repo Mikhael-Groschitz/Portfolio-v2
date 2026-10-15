@@ -1,15 +1,21 @@
 import type { Locale } from "@/content/locales";
-import type { BossHud } from "../core/world";
-import { BOSS_HEALTH } from "../entities/boss";
+import type { BoostHud, BossHud } from "../core/world";
+import { BOSS_HEALTH, type BossKind } from "../entities/boss";
 import type { Subweapon } from "../entities/hero";
 import { pixelPath } from "./pixel-path";
 import type { GameHud } from "./runtime";
-import type { GameTexts } from "./texts";
+import { type GameTexts, fill, slotTitle } from "./texts";
 import styles from "./game.module.css";
 
 const RAM_WARNING = 50;
 const RAM_CRITICAL = 80;
 const FULL_UPTIME = 99.999;
+
+const BOSS_METERS: Readonly<Record<BossKind, "heap" | "uptime" | null>> = {
+  vibe: null,
+  collector: "heap",
+  legacy: "uptime",
+};
 
 const SUBWEAPON_ICONS: Readonly<Record<Subweapon, readonly string[]>> = {
   select: [
@@ -42,6 +48,69 @@ const SUBWEAPON_ICONS: Readonly<Record<Subweapon, readonly string[]>> = {
     "X...XX...X",
     "X..XX....X",
     "XXXXXXXXXX",
+  ],
+  drop: [
+    "X.XXXX..",
+    "XXX.X.X.",
+    "XXXXXXXX",
+    "XXX.X.XX",
+    "XXXXXXXX",
+    "XXX.X.X.",
+    "X.XXXX..",
+    "X.......",
+    "X.......",
+    "X.......",
+  ],
+};
+
+const BOOST_ORDER = ["firewall", "index", "cache", "readme"] as const;
+
+const BOOST_ICONS: Readonly<
+  Record<(typeof BOOST_ORDER)[number], readonly string[]>
+> = {
+  firewall: [
+    "....X.....",
+    "...XXX....",
+    "..XX.XX...",
+    "..XXXXX...",
+    "XXXXXXXXXX",
+    "X...X....X",
+    "XXXXXXXXXX",
+    "X....X...X",
+    "XXXXXXXXXX",
+  ],
+  index: [
+    "...XXX...",
+    "...X.X...",
+    "...XXX...",
+    "....X....",
+    "..XXXXX..",
+    "..X...X..",
+    "XXX...XXX",
+    "X.X...X.X",
+    "XXX...XXX",
+  ],
+  cache: [
+    ".....XXX",
+    "....XXX.",
+    "...XXX..",
+    "..XXXXXX",
+    "XXXXXXX.",
+    "...XXX..",
+    "..XXX...",
+    ".XXX....",
+    "XX......",
+  ],
+  readme: [
+    "XXXXXX..",
+    "X....XX.",
+    "X.XX.XXX",
+    "X......X",
+    "X.XXXX.X",
+    "X......X",
+    "X.XXXX.X",
+    "X......X",
+    "XXXXXXXX",
   ],
 };
 
@@ -103,34 +172,92 @@ function uptime(boss: BossHud, locale: Locale): string {
   }).format(percent);
 }
 
-function BossBar({
+function BossMeter({
   boss,
   text,
   locale,
-}: Readonly<{ boss: BossHud | null; text: GameTexts; locale: Locale }>) {
-  if (!boss) {
-    return <div className={styles.bossBar} data-hidden />;
-  }
+}: Readonly<{ boss: BossHud; text: GameTexts; locale: Locale }>) {
   const max = BOSS_HEALTH[boss.kind];
-  const legacy = boss.kind === "legacy";
-  const value = legacy
-    ? `${uptime(boss, locale)}%`
-    : `${Math.round((100 * boss.health) / max)}%`;
+  const meter = BOSS_METERS[boss.kind];
+  const name = (
+    <span className={styles.bossName}>{text.bosses[boss.kind]}</span>
+  );
+  const value =
+    meter === "uptime"
+      ? `${uptime(boss, locale)}%`
+      : `${Math.round((100 * boss.health) / max)}%`;
   return (
-    <div className={styles.bossBar}>
-      <span className={styles.bossName}>{text.bosses[boss.kind]}</span>
+    <>
+      {meter && name}
       <label className={styles.stat}>
-        {legacy ? text.hud.uptime : text.hud.heap}
+        {meter ? text.hud[meter] : name}
         <meter
           className={`${styles.meter} ${styles.bossMeter}`}
           min={0}
           max={max}
           value={boss.health}
         />
-        <span className={styles.value} aria-hidden="true">
+        <span
+          className={`${styles.value} ${styles.amount}`}
+          data-meter={meter ?? undefined}
+          aria-hidden="true"
+        >
           {value}
         </span>
       </label>
+    </>
+  );
+}
+
+function Boosts({
+  boosts,
+  labels,
+}: Readonly<{ boosts: BoostHud; labels: GameTexts["hud"] }>) {
+  return BOOST_ORDER.filter((kind) => Boolean(boosts[kind])).map((kind) => {
+    const time = boosts[kind];
+    return (
+      <span
+        key={kind}
+        className={styles.boost}
+        data-boost={kind}
+        title={labels[kind]}
+      >
+        <PixelIcon mask={BOOST_ICONS[kind]} className={styles.icon} />
+        <span className="visually-hidden">{labels[kind]}</span>
+        {typeof time === "number" && (
+          <span className={`${styles.value} ${styles.amount}`}>
+            {fill(labels.seconds, { seconds: time })}
+          </span>
+        )}
+      </span>
+    );
+  });
+}
+
+function StatusRow({
+  hud,
+  text,
+  locale,
+}: Readonly<{ hud: GameHud; text: GameTexts; locale: Locale }>) {
+  const { slot, boss } = hud;
+  return (
+    <div className={styles.statusRow}>
+      {!boss && (
+        <span
+          className={slot.kind === "boss" ? styles.bossName : styles.location}
+        >
+          {slotTitle(slot, text)}
+        </span>
+      )}
+      {!boss && slot.kind === "stage" && (
+        <span className={styles.stageName}>{text.stages[slot.stage]}</span>
+      )}
+      <Boosts boosts={hud.boosts} labels={text.hud} />
+      {boss && (
+        <span className={styles.bossGroup}>
+          <BossMeter boss={boss} text={text} locale={locale} />
+        </span>
+      )}
     </div>
   );
 }
@@ -162,18 +289,22 @@ export function Hud({
           optimum={0}
           value={hud.ram}
         />
-        <span className={styles.value} aria-hidden="true">
+        <span className={`${styles.value} ${styles.amount}`} aria-hidden="true">
           {hud.ram}%
         </span>
       </label>
       <span className={styles.stat}>
         {labels.energy}
         <span className={styles.subweapon} data-subweapon={hud.subweapon}>
-          <PixelIcon
-            mask={SUBWEAPON_ICONS[hud.subweapon]}
-            className={styles.icon}
-          />
-          {text.subweapons[hud.subweapon]}
+          <span className={styles.slot}>
+            <PixelIcon
+              mask={SUBWEAPON_ICONS[hud.subweapon]}
+              className={styles.icon}
+            />
+          </span>
+          <span className={styles.subweaponName}>
+            {text.subweapons[hud.subweapon]}
+          </span>
         </span>
         <span className={styles.value}>
           {String(hud.energy).padStart(2, "0")}
@@ -206,7 +337,7 @@ export function Hud({
       <span className={styles.hint}>
         <kbd className={styles.key}>Esc</kbd> {labels.exit}
       </span>
-      <BossBar boss={hud.boss} text={text} locale={locale} />
+      <StatusRow hud={hud} text={text} locale={locale} />
     </div>
   );
 }

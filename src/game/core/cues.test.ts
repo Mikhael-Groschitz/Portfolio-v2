@@ -3,19 +3,21 @@ import { COLLECTOR, LEGACY, RAM } from "../balance";
 import type { Collector } from "../entities/collector";
 import { type Controls, LASH_FRAMES, NO_CONTROLS } from "../entities/hero";
 import type { Legacy } from "../entities/legacy";
+import { skipAhead } from "../dev/tools";
+import { CAMPAIGN, parseCampaign } from "../levels/campaign";
 import { parseLevel } from "../levels/level";
-import { parseStage } from "../levels/stage";
 import { CUES, type Cue, createCues } from "./cues";
 import {
   type World,
   createWorld,
   hudOf,
-  skipAhead,
   skipIntro,
   startIntro,
   step,
   toggleSound,
 } from "./world";
+
+const rooms = parseCampaign();
 
 function start(world: World): World {
   startIntro(world);
@@ -34,7 +36,10 @@ function arena(floor: string, extra: Record<number, string> = {}): World {
     "##############################",
   ];
   return start(
-    createWorld([parseLevel(rows)], { reducedMotion: false, seed: 3 }),
+    createWorld([{ slot: CAMPAIGN[0], level: parseLevel(rows) }], {
+      reducedMotion: false,
+      seed: 3,
+    }),
   );
 }
 
@@ -92,7 +97,7 @@ describe("sound cues", () => {
   });
 
   it("play a sound for each subweapon and for the door", () => {
-    const world = start(createWorld(parseStage(), { reducedMotion: false }));
+    const world = start(createWorld(rooms, { reducedMotion: false }));
     run(world, 1, { subweaponPressed: true });
     expect(world.cues.select).toBe(1);
     skipAhead(world);
@@ -101,9 +106,7 @@ describe("sound cues", () => {
   });
 
   it("follow the bosses' moves", () => {
-    const world = start(
-      createWorld([parseStage()[1]], { reducedMotion: false }),
-    );
+    const world = start(createWorld([rooms[5]], { reducedMotion: false }));
     const collector = world.room.boss as Collector;
     world.hero.x = collector.trigger;
     world.hero.invulnerable = 100_000;
@@ -114,9 +117,7 @@ describe("sound cues", () => {
     skipAhead(world);
     expect(world.cues.bossDown).toBe(1);
 
-    const throne = start(
-      createWorld([parseStage()[3]], { reducedMotion: false }),
-    );
+    const throne = start(createWorld([rooms[8]], { reducedMotion: false }));
     const legacy = throne.room.boss as Legacy;
     throne.hero.x = legacy.trigger;
     throne.hero.invulnerable = 100_000;
@@ -137,7 +138,7 @@ describe("sound cues", () => {
 
 describe("sound switch", () => {
   it("mutes, unmutes and tells the player each time", () => {
-    const world = start(createWorld(parseStage(), { reducedMotion: false }));
+    const world = start(createWorld(rooms, { reducedMotion: false }));
     expect(hudOf(world).muted).toBe(false);
     toggleSound(world);
     expect(world.muted).toBe(true);
@@ -145,7 +146,7 @@ describe("sound switch", () => {
     toggleSound(world);
     expect(hudOf(world)).toMatchObject({ muted: false, notice: "soundOn" });
     expect(
-      createWorld(parseStage(), { reducedMotion: false, muted: true }).muted,
+      createWorld(rooms, { reducedMotion: false, muted: true }).muted,
     ).toBe(true);
   });
 });
