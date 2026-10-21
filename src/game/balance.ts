@@ -34,6 +34,17 @@ export const RAM = {
 
 export const RETRY = { relief: 10, floor: 20 } as const;
 
+export const RANKING = {
+  size: 10,
+  nameLength: 3,
+  minTimeMs: 120_000,
+  maxTimeMs: 5_999_990,
+  tokenTtlMs: 7_200_000,
+  clockToleranceMs: 2_000,
+  submitLimit: 5,
+  submitWindowMs: 3_600_000,
+} as const;
+
 export const HURT = {
   invulnerableFrames: 60,
   stunFrames: 18,

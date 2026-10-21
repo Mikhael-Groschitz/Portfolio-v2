@@ -1,0 +1,29 @@
+name: portfolio-ranking
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_USER: ranking
+      POSTGRES_PASSWORD: ranking
+      POSTGRES_DB: ranking
+    ports:
+      - "127.0.0.1:5433:5432"
+    volumes:
+      - ranking-data:/var/lib/postgresql/data
+    configs:
+      - source: create-test-database
+        target: /docker-entrypoint-initdb.d/create-test-database.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ranking -d ranking"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+configs:
+  create-test-database:
+    content: |
+      CREATE DATABASE ranking_test;
+
+volumes:
+  ranking-data:

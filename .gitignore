@@ -42,5 +42,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# prisma client
+/src/server/db/generated/
+
+# ranking backups
+/ranking-backups/
+
 # reference screenshots
 /docs/

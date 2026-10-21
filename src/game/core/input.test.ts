@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { type Action, actionFor, attachKeyboard } from "./input";
+import {
+  type Action,
+  TYPING_ATTRIBUTE,
+  actionFor,
+  attachKeyboard,
+} from "./input";
 
 function key(
   type: "keydown" | "keyup",
@@ -101,6 +106,24 @@ describe("game keys", () => {
     Object.defineProperty(event, "target", { value: { tagName: "BUTTON" } });
     target.dispatchEvent(event);
     expect(event.defaultPrevented).toBe(false);
+    expect(presses).toEqual([]);
+  });
+
+  it("leaves every key to the name entry while it is focused", () => {
+    const { target, presses } = setup();
+    const typed = ["KeyZ", "KeyM", "Escape", "Enter", "ArrowUp"].map((code) => {
+      const event = key("keydown", code);
+      Object.defineProperty(event, "target", {
+        value: {
+          tagName: "INPUT",
+          closest: (selector: string) =>
+            selector === `[${TYPING_ATTRIBUTE}]` ? {} : null,
+        },
+      });
+      target.dispatchEvent(event);
+      return event;
+    });
+    expect(typed.some((event) => event.defaultPrevented)).toBe(false);
     expect(presses).toEqual([]);
   });
 
