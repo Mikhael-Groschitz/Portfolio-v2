@@ -1,8 +1,11 @@
 import type { RefObject } from "react";
 import { SuccessIcon, WarningIcon } from "@/components/icons";
 import { formatCompletionTime, formatElapsed } from "@/content/format";
+import { formatRankingTime } from "@/ranking/format";
 import { BOSS_KINDS } from "../entities/boss";
+import { TITLE_COMMANDS, commandLines } from "./command-sheet";
 import type { GameTexts } from "./texts";
+import { toRankingMs } from "./victory-flow";
 import styles from "./game.module.css";
 
 interface PanelProps {
@@ -48,8 +51,8 @@ export function TitlePanel({
       <p className={styles.prompt}>{text.prompt}</p>
       <p className={styles.tip}>{text.tip}</p>
       <dl className={styles.controls} aria-label={text.controlsLabel}>
-        {text.controls.map(({ keys, action }) => (
-          <div key={keys} className={styles.control}>
+        {commandLines(text, TITLE_COMMANDS).map(({ id, keys, action }) => (
+          <div key={id} className={styles.control}>
             <dt>
               <kbd className={styles.key}>{keys}</kbd>
             </dt>
@@ -112,10 +115,13 @@ export function CrashPanel({
 export function VictoryPanel({
   playMs,
   endedAt,
+  result,
   text,
   actionRef,
   onExit,
-}: Readonly<PanelProps & { playMs: number; endedAt: number }>) {
+}: Readonly<
+  PanelProps & { playMs: number; endedAt: number; result: string | null }
+>) {
   const { victory } = text;
   return (
     <div className={`${styles.panel} ${styles.crashPanel}`}>
@@ -130,6 +136,10 @@ export function VictoryPanel({
         </dl>
         <p>{victory.rows}</p>
         <p>{victory.message}</p>
+        <p>
+          {victory.playTime}: {formatRankingTime(toRankingMs(playMs))}
+        </p>
+        {result && <p>{result}</p>}
         <p>
           {victory.completionTime}: {formatCompletionTime(new Date(endedAt))}
         </p>

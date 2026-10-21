@@ -22,5 +22,5 @@ export function proxy(request: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next|__nextjs|_vercel|v1|.*\\.).*)"],
+  matcher: ["/((?!_next|__nextjs|_vercel|v1|api/|.*\\.).*)"],
 };

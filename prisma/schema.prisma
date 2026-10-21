@@ -1,0 +1,35 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/server/db/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model LeaderboardEntry {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(3)
+  timeMs    Int      @map("time_ms")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(3)
+
+  @@index([timeMs, createdAt, id])
+  @@map("leaderboard_entry")
+}
+
+model UsedToken {
+  jti       String   @id @db.VarChar(32)
+  expiresAt DateTime @map("expires_at") @db.Timestamptz(3)
+
+  @@index([expiresAt])
+  @@map("used_token")
+}
+
+model RateLimit {
+  key     String   @id @db.VarChar(64)
+  count   Int
+  resetAt DateTime @map("reset_at") @db.Timestamptz(3)
+
+  @@index([resetAt])
+  @@map("rate_limit")
+}

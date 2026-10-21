@@ -1,39 +1,13 @@
 import type { Controls } from "../entities/hero";
+import { ACTION_KEYS, type Action } from "./commands";
 
-export type Action =
-  | "left"
-  | "right"
-  | "down"
-  | "jump"
-  | "attack"
-  | "subweapon"
-  | "switch"
-  | "pause"
-  | "exit"
-  | "confirm"
-  | "retry"
-  | "mute";
+export type { Action };
 
-const ACTIONS: Readonly<Record<string, Action>> = {
-  ArrowLeft: "left",
-  KeyA: "left",
-  ArrowRight: "right",
-  KeyD: "right",
-  ArrowDown: "down",
-  KeyS: "down",
-  ArrowUp: "jump",
-  KeyW: "jump",
-  Space: "jump",
-  KeyZ: "attack",
-  KeyX: "subweapon",
-  KeyC: "switch",
-  KeyP: "pause",
-  Escape: "exit",
-  Enter: "confirm",
-  NumpadEnter: "confirm",
-  KeyR: "retry",
-  KeyM: "mute",
-};
+const ACTIONS: Readonly<Record<string, Action>> = Object.fromEntries(
+  Object.entries(ACTION_KEYS).flatMap(([action, codes]) =>
+    codes.map((code) => [code, action as Action]),
+  ),
+);
 
 const BUTTON_KEYS = new Set<Action>(["confirm", "jump"]);
 
@@ -55,9 +29,21 @@ export interface Keyboard {
   detach: () => void;
 }
 
+export const TYPING_ATTRIBUTE = "data-typing";
+
+interface KeyTarget {
+  tagName?: string;
+  closest?: (selector: string) => unknown;
+}
+
 function pressesButton(event: Event, action: Action): boolean {
-  const target = event.target as { tagName?: string } | null;
+  const target = event.target as KeyTarget | null;
   return target?.tagName === "BUTTON" && BUTTON_KEYS.has(action);
+}
+
+function insideTyping(event: Event): boolean {
+  const target = event.target as KeyTarget | null;
+  return Boolean(target?.closest?.(`[${TYPING_ATTRIBUTE}]`));
 }
 
 export function attachKeyboard(
@@ -83,7 +69,7 @@ export function attachKeyboard(
     if (!action || key.ctrlKey || key.altKey || key.metaKey) {
       return;
     }
-    if (pressesButton(event, action)) {
+    if (insideTyping(event) || pressesButton(event, action)) {
       return;
     }
     event.preventDefault();

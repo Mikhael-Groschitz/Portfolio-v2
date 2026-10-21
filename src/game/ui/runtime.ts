@@ -37,11 +37,14 @@ export interface GameOptions {
   onHud: (hud: GameHud) => void;
   onAnchor: (anchor: Anchor) => void;
   onExit: () => void;
+  onRanking?: () => void;
 }
 
 export interface Game {
   start: () => void;
   command: (action: Action) => void;
+  hold: () => void;
+  lock: (onEscape: (() => void) | null) => void;
   destroy: () => void;
 }
 
@@ -66,7 +69,7 @@ function confirm(world: World): void {
 
 export function createGame(
   canvas: HTMLCanvasElement,
-  { reducedMotion, onHud, onAnchor, onExit }: GameOptions,
+  { reducedMotion, onHud, onAnchor, onExit, onRanking }: GameOptions,
 ): Game {
   const context = canvas.getContext("2d");
   const rooms = parseCampaign();
@@ -84,6 +87,7 @@ export function createGame(
   let alive = true;
   let dev: DevTools | null = null;
   let shown: GameHud | null = null;
+  let locked: (() => void) | null = null;
   const spot: Anchor = { x: 0, y: 0 };
   const anchored: Anchor = { x: Number.NaN, y: Number.NaN };
 
@@ -141,6 +145,9 @@ export function createGame(
       case "retry":
         retry(world);
         break;
+      case "ranking":
+        onRanking?.();
+        return;
       default:
         return;
     }
@@ -148,7 +155,13 @@ export function createGame(
     publish();
   }
 
-  const keyboard = attachKeyboard(window, command);
+  const keyboard = attachKeyboard(window, (action) => {
+    if (!locked) {
+      command(action);
+    } else if (action === "exit") {
+      locked();
+    }
+  });
 
   function refresh() {
     if (world.mode !== "title") {
@@ -218,6 +231,19 @@ export function createGame(
       publish();
     },
     command,
+    hold() {
+      if (world.mode !== "playing") {
+        return;
+      }
+      keyboard.release();
+      pause(world);
+      audio.sync(world);
+      publish();
+    },
+    lock(onEscape) {
+      locked = onEscape;
+      keyboard.release();
+    },
     destroy() {
       running = false;
       alive = false;

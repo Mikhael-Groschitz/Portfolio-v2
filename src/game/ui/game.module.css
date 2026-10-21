@@ -226,6 +226,7 @@
 }
 
 .viewport {
+  position: relative;
   display: flex;
   flex: 1;
   align-items: center;
@@ -258,7 +259,7 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  justify-content: center;
+  justify-content: safe center;
   gap: 12px;
   padding: 16px;
   overflow: auto;
@@ -427,6 +428,86 @@
   color: inherit;
 }
 
+.record {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  width: min(100%, 460px);
+  margin: 0;
+  padding: 16px 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-messages);
+  font-size: 13px;
+}
+
+.record p {
+  margin: 0;
+}
+
+.recordTitle {
+  color: var(--status-connected);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+}
+
+.recordPlace {
+  color: var(--syntax-keyword);
+  font-weight: 700;
+}
+
+.initials {
+  display: flex;
+  gap: 10px;
+  margin: 4px 0 0;
+  padding: 0;
+  border: 0;
+}
+
+.initial {
+  box-sizing: border-box;
+  width: 46px;
+  height: 54px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-block-end: 3px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text);
+  caret-color: transparent;
+  font: inherit;
+  font-size: 28px;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
+}
+
+.initial:focus {
+  border-color: var(--accent);
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.initial::selection {
+  background: transparent;
+}
+
+.recordHelp,
+.recordPrivacy {
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.recordProblem {
+  color: var(--text-error);
+}
+
+.recordConfirm {
+  flex-basis: 100%;
+  font-weight: 700;
+}
+
 .notice {
   position: absolute;
   bottom: 8px;
@@ -552,6 +633,234 @@
   background: color-mix(in srgb, var(--bg-window) 70%, transparent);
   color: var(--text-muted);
   font-size: 12px;
+}
+
+.sidePanel {
+  position: absolute;
+  top: 50%;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: var(--panel-width);
+  height: calc(var(--stage-height) + 12px);
+  border: 1px solid var(--border);
+  border-block-start: 2px solid var(--accent);
+  background: var(--bg-panel);
+  color: var(--text);
+  font-size: 13px;
+  translate: 0 -50%;
+}
+
+.sidePanel[data-place="left"] {
+  right: calc(50% + var(--stage-width) / 2 + 6px + var(--panel-gap));
+}
+
+.sidePanel[data-place="right"] {
+  left: calc(50% + var(--stage-width) / 2 + 6px + var(--panel-gap));
+}
+
+.sidePanel[data-place="over"] {
+  left: 50%;
+  z-index: 5;
+  width: min(calc(var(--stage-width) - 24px), 420px);
+  height: calc(var(--stage-height) - 24px);
+  translate: -50% -50%;
+}
+
+.sideHeader {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 28px;
+  padding-inline: 8px 6px;
+}
+
+.sideTitle {
+  margin: 0;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+}
+
+.sideClose {
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  background: var(--bg-input);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.sideBody {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  padding: 0 8px;
+  overflow: auto;
+}
+
+.sideFooter {
+  flex: none;
+  padding: 6px 8px 8px;
+  border-block-start: 1px solid var(--grid-border);
+  color: var(--text-muted);
+  font-size: 12px;
+}
+
+.rankingTable {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--grid-row);
+}
+
+.rankingTable th,
+.rankingTable td {
+  padding: 2px 8px;
+  border: 1px solid var(--grid-border);
+  text-align: start;
+  white-space: nowrap;
+}
+
+.rankingTable thead th {
+  background: var(--grid-header);
+  color: var(--text-muted);
+  font-weight: normal;
+}
+
+.rankingTable tbody th {
+  width: 3ch;
+  color: var(--text-muted);
+  font-weight: normal;
+  text-align: end;
+}
+
+.rankingTable td:last-child,
+.rankingTable thead th:last-child {
+  text-align: end;
+}
+
+.rankingTable tr[data-empty] td {
+  color: var(--text-muted);
+}
+
+.rankingTable tr[data-highlighted] th,
+.rankingTable tr[data-highlighted] td {
+  background: var(--grid-row-selected);
+  color: var(--grid-row-selected-text);
+}
+
+.rankingTable[data-loading] tbody td {
+  animation: loading-rows 1.6s ease-in-out infinite alternate;
+}
+
+@keyframes loading-rows {
+  from {
+    opacity: 1;
+  }
+
+  to {
+    opacity: 0.45;
+  }
+}
+
+:global(html[data-motion="reduce"]) .rankingTable[data-loading] tbody td {
+  animation: none;
+}
+
+.rankingStatus {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 6px;
+  min-height: 3.4em;
+  padding-block: 8px;
+  color: var(--text-muted);
+}
+
+.rankingStatus p {
+  margin: 0;
+}
+
+.sheetSection {
+  padding-block: 6px;
+}
+
+.sheetTitle {
+  margin: 0 0 4px;
+  color: var(--syntax-keyword);
+  font: inherit;
+  font-weight: 700;
+}
+
+.sheetList {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.sheetLine {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 8px;
+}
+
+.sheetLine dd {
+  flex: 1 1 10ch;
+  min-width: 10ch;
+  margin: 0;
+  color: var(--text-muted);
+}
+
+.sheetLine[data-kind="sql"] {
+  flex-direction: column;
+}
+
+.sheetLine[data-kind="sql"] dd {
+  flex: none;
+  min-width: 0;
+}
+
+.sqlName {
+  color: var(--syntax-keyword);
+  font: inherit;
+  font-weight: 700;
+}
+
+.panelToggles {
+  display: flex;
+  gap: 8px;
+}
+
+.panelToggles[data-placement="below"] {
+  position: absolute;
+  top: calc(50% + var(--stage-height) / 2 + 14px);
+  left: 50%;
+  translate: -50% 0;
+}
+
+.panelToggles[data-placement="beside"] {
+  display: contents;
+}
+
+.panelToggles[data-placement="beside"] > button {
+  position: absolute;
+  top: calc(50% - var(--stage-height) / 2 - 6px);
+}
+
+.panelToggles[data-placement="beside"] > button:first-child {
+  right: calc(50% + var(--stage-width) / 2 + 22px);
+}
+
+.panelToggles[data-placement="beside"] > button:last-child {
+  left: calc(50% + var(--stage-width) / 2 + 22px);
 }
 
 @media (max-width: 767px) {
